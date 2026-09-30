@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -97,7 +97,23 @@ function useDressForm(height: number) {
 }
 
 /**
- * The form the garment is worn on.
+ * The form the garment is worn on, when there is one.
+ *
+ * By default there is not, and that is deliberate. The garment is shaped
+ * around a body — shoulders, chest, waist — but nothing is inside it. That
+ * is the ghost-mannequin look, and it is what premium retailers actually
+ * use: the clothes are the subject and a visible dummy is furniture.
+ *
+ * A built form was drawn here and it came out as a cone in a t-shirt. A
+ * half-suggested body is worse than none, because it invites the viewer to
+ * look for a person and then does not deliver one.
+ *
+ * It could not have fitted either. The garment outline is traced from a
+ * flat-lay photograph — flat, symmetrical, sleeves straight out to the
+ * sides. A real body has arms where that outline has none, so a rounded
+ * form pushes through the sleeves.
+ *
+ * A .glb at `public/models/mannequin.glb` is used if present.
  *
  * A note on what is visible and what is not: the garment silhouette is traced
  * from a flat-lay photograph, which has no neck opening — the collar is
@@ -125,56 +141,14 @@ export function Mannequin({
 }) {
   // A lathe: one silhouette curve spun around the vertical axis. Cheaper than
   // a sculpted mesh and, for a neck and shoulder line, indistinguishable.
-  const neck = useMemo(() => {
-    const h = height;
-    // Reaches well above the collar. Sitting level with the neckline, the
-    // form was hidden behind the shirt's own front sheet and the garment
-    // still read as empty — the whole point is that something is visibly
-    // inside it.
-    const profile: THREE.Vector2[] = [
-      // radius, y — from above the collar down to the collarbone line.
-      new THREE.Vector2(0.0, h * 0.72),
-      new THREE.Vector2(h * 0.058, h * 0.71),
-      new THREE.Vector2(h * 0.07, h * 0.64),
-      new THREE.Vector2(h * 0.074, h * 0.56),
-      new THREE.Vector2(h * 0.086, h * 0.48),
-      new THREE.Vector2(h * 0.125, h * 0.42),
-      new THREE.Vector2(h * 0.18, h * 0.36),
-    ];
-    return new THREE.LatheGeometry(profile, 28);
-  }, [height]);
-
-  // The upper chest, sitting just inside the shirt so it fills the neckline
-  // and the shoulders rather than showing through them.
-  const chest = useMemo(() => {
-    const g = new THREE.SphereGeometry(height * 0.2, 24, 18);
-    // Must stay inside the torso the cloth is draped over, which is 56% of
-    // the garment's half-width — the rest is sleeve. Wider than that and the
-    // form shows past the shoulders as a dark band, which is what it did.
-    // Shallow in z as well as narrow. The garment's back sheet sits only
-    // about a third of a unit behind centre, so a deeper form pushes
-    // straight through it and appears as a dark blob when the piece is
-    // turned round.
-    g.scale(1.0, 0.8, 0.34);
-    return g;
-  }, [height]);
-
   const dressForm = useDressForm(height);
 
-  // A supplied model replaces the built shape entirely rather than sitting
-  // alongside it; two forms inside one garment would intersect.
-  if (dressForm) return <primitive object={dressForm} />;
+  // Nothing by default. The cloth is shaped around a body; showing what is
+  // inside it turned out not to matter, and a half-suggested one actively
+  // hurt — the built form came out as a cone in a t-shirt.
+  if (!dressForm) return null;
 
-  return (
-    <group>
-      <mesh geometry={neck} position={[0, 0, -height * 0.01]}>
-        <meshStandardMaterial color="#6f655a" roughness={0.95} metalness={0.02} />
-      </mesh>
-      <mesh geometry={chest} position={[0, height * 0.24, height * 0.01]}>
-        <meshStandardMaterial color="#5c534a" roughness={0.96} metalness={0.02} />
-      </mesh>
-    </group>
-  );
+  return <primitive object={dressForm} />;
 }
 
 export default Mannequin;
