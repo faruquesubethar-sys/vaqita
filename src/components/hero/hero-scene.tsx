@@ -240,6 +240,18 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
           Giving them gloss and emissive, as before, turned the wing into
           backlit plastic.
         */}
+        {/* The gold lip each inlay sits in. Drawn first, fractionally lower,
+            so a band of metal frames every green plane. */}
+        <mesh geometry={geo.bezels}>
+          <meshStandardMaterial
+            color="#d8bb8e"
+            metalness={0.88}
+            roughness={0.32}
+            envMapIntensity={0.85}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+
         <mesh geometry={geo.facets}>
           <meshStandardMaterial
             color="#3b4f44"

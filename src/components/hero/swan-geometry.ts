@@ -99,6 +99,15 @@ const BEVEL_THICKNESS = 0.02;
 // creases about three times the width they are on the real piece.
 const CREASE = -2.2;
 
+/**
+ * How far the gold bezel extends past each green panel, in SVG units.
+ *
+ * On the brooch every inlay is held in a raised gold lip. Rendered without
+ * one the panels had no border, and dark shapes lying flat on bright metal
+ * with no edge look like a spill rather than a setting.
+ */
+const BEZEL = 3.4;
+
 /* -------------------------------------------------------------- geometry */
 
 function toShape(points: [number, number][]): THREE.Shape {
@@ -188,8 +197,10 @@ function insetPolygon(points: [number, number][], d: number): [number, number][]
 
 export type SwanGeometries = {
   shell: THREE.ExtrudeGeometry;
-  /** Folded, not extruded — see buildFoldedFan. */
+  /** Folded, not extruded — see buildFoldedFacets. */
   facets: THREE.BufferGeometry;
+  /** The gold lip each green panel is set into. */
+  bezels: THREE.BufferGeometry;
   eye: THREE.ExtrudeGeometry;
   dispose: () => void;
 };
@@ -218,13 +229,20 @@ export type SwanGeometries = {
  * Tilts are derived from the panel index rather than random, so the mark
  * looks identical on every load.
  */
-function buildFoldedFacets(): THREE.BufferGeometry {
+function buildFoldedFacets(kind: "panel" | "bezel"): THREE.BufferGeometry {
   const positions: number[] = [];
   const BASE = 0.016;
 
   PANELS.forEach((panel, index) => {
-    const inset = insetPolygon(panel, CREASE);
+    // The bezel is the same polygon grown outward, sitting a hair lower, so
+    // a band of gold shows around every green plane. Without it the inlays
+    // read as colour spilled onto the metal rather than set into it — they
+    // had no edge of their own at all, because a flat patch on a flat
+    // surface has nothing to catch light along its border.
+    const grow = kind === "bezel" ? BEZEL : 0;
+    const inset = insetPolygon(panel, CREASE - grow);
     if (inset.length < 3) return;
+    const lift = kind === "bezel" ? -0.006 : 0;
 
     // Centroid, in the same 250 x 200 space the points are given in.
     let cx = 0;
@@ -246,7 +264,7 @@ function buildFoldedFacets(): THREE.BufferGeometry {
       -(y - CY) * SCALE,
       // A plane through the centroid: still exactly flat, just not parallel
       // to its neighbours.
-      BASE + ((x - cx) * tiltX + (y - cy) * tiltY) * SCALE,
+      BASE + lift + ((x - cx) * tiltX + (y - cy) * tiltY) * SCALE,
     ];
 
     // Fan from the centroid. Every vertex lies on the same plane, so this
@@ -280,7 +298,8 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   });
 
   // The wing's green panels, each genuinely folded rather than extruded flat.
-  const facets = buildFoldedFacets();
+  const facets = buildFoldedFacets("panel");
+  const bezels = buildFoldedFacets("bezel");
 
   const eye = new THREE.ExtrudeGeometry([toShape(EYE)], {
     depth: 0.045,
@@ -305,10 +324,12 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
    */
   const halfDepth = (box.max.z - box.min.z) / 2;
   facets.translate(dx, dy, halfDepth - 0.005);
+  bezels.translate(dx, dy, halfDepth - 0.005);
   eye.translate(dx, dy, halfDepth + 0.008);
 
   shell.computeVertexNormals();
   facets.computeVertexNormals();
+  bezels.computeVertexNormals();
   eye.computeVertexNormals();
 
   // A NaN vertex makes the whole mesh vanish without throwing, so it is worth
@@ -330,10 +351,12 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   return {
     shell,
     facets,
+    bezels,
     eye,
     dispose: () => {
       shell.dispose();
       facets.dispose();
+      bezels.dispose();
       eye.dispose();
     },
   };
