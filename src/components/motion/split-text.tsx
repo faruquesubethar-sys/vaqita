@@ -52,7 +52,7 @@ export function SplitText({
     if (!chars.length) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      gsap.set(chars, { y: 0, rotate: 0, opacity: 1 });
+      gsap.set(chars, { y: 0, rotate: 0, scale: 1, opacity: 1, filter: "none" });
       return;
     }
 
@@ -60,8 +60,10 @@ export function SplitText({
       gsap.to(chars, {
         y: 0,
         rotate: 0,
+        scale: 1,
         opacity: 1,
-        duration: 1.15,
+        filter: "blur(0px)",
+        duration: 1.35,
         ease: "expo.out",
         stagger,
         delay,

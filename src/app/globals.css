@@ -176,9 +176,36 @@ body {
 /* Per-character display animation used on hero and section headings. */
 .char {
   display: inline-block;
-  transform: translateY(1.1em) rotate(2deg);
+  /* Starts further down, tipped, small and out of focus. The blur is what
+     makes it read as arriving rather than sliding: focus pulling in is a
+     film grammar the eye already knows, and it costs one extra property. */
+  transform: translateY(1.15em) rotate(3deg) scale(0.94);
+  filter: blur(9px);
   opacity: 0;
-  will-change: transform, opacity;
+  will-change: transform, opacity, filter;
+}
+
+/* A single band of light crossing a heading once it has landed. */
+.shimmer {
+  position: relative;
+  background-image: linear-gradient(
+    100deg,
+    transparent 38%,
+    rgba(245, 219, 148, 0.85) 50%,
+    transparent 62%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-position: 190% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: vq-shimmer 2.6s cubic-bezier(0.33, 0, 0.2, 1) var(--shimmer-delay, 1.6s) both;
+}
+
+@keyframes vq-shimmer {
+  to {
+    background-position: -90% 0;
+  }
 }
 
 /* The underline that draws itself on hover — used on every text link. */
@@ -268,5 +295,10 @@ a:hover > .link-underline-bar {
   .char {
     opacity: 1;
     transform: none;
+    filter: none;
+  }
+
+  .shimmer {
+    animation: none;
   }
 }

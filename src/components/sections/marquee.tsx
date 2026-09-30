@@ -1,12 +1,15 @@
+// What the shop actually is: new imported stock in small lots, not a
+// second-hand rail. Every line here used to claim the opposite — hand
+// graded, one owner before you — which described a business this is not.
 const ITEMS = [
-  "Hand graded",
-  "Single-stitch hems",
-  "Deadstock, never issued",
-  "240gsm tubular cotton",
-  "Small-lot reactive dye",
+  "Brand new, never worn",
+  "Imported in small lots",
+  "One of each size",
+  "240gsm heavyweight cotton",
+  "Never restocked",
   "Triple-stitched seams",
   "Try every piece in 3D",
-  "One owner before you",
+  "Shipped from India",
 ];
 
 /**

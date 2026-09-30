@@ -27,7 +27,7 @@ const COLUMNS = [
     title: "The Hub",
     links: [
       { href: "/collections", label: "Everything in stock" },
-      { href: "/#sorting", label: "How we grade" },
+      { href: "/#sorting", label: "How we buy" },
       { href: "/#materials", label: "Fabrics" },
     ],
   },

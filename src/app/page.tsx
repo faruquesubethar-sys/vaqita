@@ -153,26 +153,24 @@ export default async function HomePage() {
 
         <div className="shell max-w-3xl">
           <Reveal>
-            <p className="eyebrow">How we grade</p>
+            <p className="eyebrow">How we buy</p>
             <h2 className="display mt-5 text-[clamp(2.25rem,5.5vw,4.5rem)] leading-[1.02] text-alabaster">
-              Every piece is graded by hand, and the grade sets the price.
+              We buy small, and we do not buy the same thing twice.
             </h2>
           </Reveal>
 
           <Reveal delay={160}>
             <p className="mt-8 text-base leading-relaxed text-stone">
-              Bales arrive unsorted. Everything gets opened, washed, and put in
-              front of someone who checks the collar, the seams, the hems and
-              the print, then puts it in one of four piles. Grade A is
-              indistinguishable from new. Grade B has something — a softened
-              collar, a faint mark, one resewn seam — and it is listed at a
-              lower price with the fault named. C becomes offcuts. D is rag.
+              Everything here is new and imported, bought in lots small enough
+              to carry. A style arrives in one of each size, goes up, sells,
+              and is not ordered again. That is the point: you are not buying
+              something a hundred other people in the city are also wearing.
             </p>
             <p className="mt-5 text-base leading-relaxed text-stone">
-              Most of the trade photographs around the flaw. We would rather
-              tell you what is wrong with a shirt and let you decide, which is
-              also why every piece here can be turned around in 3D before you
-              spend anything.
+              Most shops photograph a sample and ship you whatever arrives.
+              Every piece here is photographed front and back as itself, and
+              the 3D model is built from those photographs — so what turns on
+              screen is the garment going in the box, not a stand-in for it.
             </p>
           </Reveal>
         </div>

@@ -6,40 +6,45 @@ import { useEffect, useRef, useState } from "react";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 
+// The cloth, described as what it is: new imported stock. These entries
+// previously described a second-hand rail — "past the plateau", "thirty years
+// old and never worn", garments of different ages going into a dye lot — none
+// of which is this business.
 const MATERIALS = [
   {
     id: "jersey",
-    name: "Vintage jersey",
-    origin: "Sorted in Gujarat",
+    name: "Heavyweight jersey",
+    origin: "Imported",
     detail:
-      "Cotton jersey improves for about five years and then plateaus. Everything in the thrift rail is past the plateau: the yarn has relaxed, the surface has gone slightly uneven, and it drapes the way a new tee will not until you have put fifty wears into it.",
+      "240gsm and tubular knit, which means no side seam to twist after a wash. Heavy enough to hang straight off the shoulder instead of clinging, and thick enough that a print sits on the surface rather than soaking through to the back.",
     image: "/products/tee-faded-black.svg",
   },
   {
-    id: "deadstock",
-    name: "Deadstock cotton",
-    origin: "Unmarked warehouses",
+    id: "acid",
+    name: "Acid wash",
+    origin: "Imported",
     detail:
-      "Made, warehoused, never issued. Thirty years old and never worn. The cloth is a heavyweight most mills stopped running because it costs more and nobody asks for it. Stiff for three wears, then the best thing you own.",
+      "Washed in small batches, so no two pieces break the same way. The pattern is made by the wash rather than printed on, which is why it runs through the cloth and will not lift at the edges the way a surface print eventually does.",
     image: "/products/ls-olive.svg",
   },
   {
     id: "chambray",
     name: "Chambray",
-    origin: "Tamil Nadu",
+    origin: "Imported",
     detail:
-      "A plain weave with a coloured warp and a white weft, which is why it lightens at every crease as it wears. Triple stitching at the load-bearing seams means the shirt fails at the cloth long before it fails at the seam.",
+      "A plain weave with a coloured warp and a white weft, which is why it lightens at every crease as you wear it in. Triple stitching at the load-bearing seams means the shirt will fail at the cloth long before it fails at a seam.",
     image: "/products/shirt-chambray.svg",
   },
   {
-    id: "overdye",
-    name: "Reactive dye",
-    origin: "Tiruppur",
+    id: "twill",
+    name: "Cotton twill",
+    origin: "Imported",
     detail:
-      "We dye in lots of about forty. The garments going in are all different ages, so they come out sharing a family resemblance rather than a colour match — and the seams almost always take it darker, because the thread is polyester and refuses the dye.",
+      "The diagonal rib is what makes twill hold a crease and shrug off a crumple, which is the whole argument for it in a trouser. Heavier than a chino and cut wider, so it falls from the knee instead of tapering in at it.",
     image: "/products/hoodie-ash.svg",
   },
 ];
+
 
 /**
  * An index of materials where hovering (or focusing) a row swaps the image.

@@ -29,14 +29,14 @@ const sans = Jost({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "VAQITA Mens Fashion Hub — Thrifted tees, surplus & overdye",
+    default: "VAQITA Mens Fashion Hub — Imported menswear, one of each",
     template: "%s · VAQITA Mens Fashion Hub",
   },
   description:
-    "Thrifted tees, deadstock surplus shirting and small-lot overdye. Graded by hand, priced by condition, and every piece viewable in 3D before you buy.",
+    "New imported tees, polos and trousers in small lots — one of each size, never restocked, and every piece viewable in 3D before you buy.",
   openGraph: {
     title: "VAQITA Mens Fashion Hub",
-    description: "Thrifted tees, surplus and overdye — every piece in 3D.",
+    description: "Imported menswear in small lots — every piece in 3D.",
     type: "website",
   },
 };

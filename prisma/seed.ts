@@ -27,7 +27,7 @@ const COLLECTIONS = [
     name: "Surplus",
     tagline: "Issued, never used.",
     description:
-      "Deadstock and service-issue pieces that never made it to a shop floor. Heavier cloth, squarer cuts, and hardware specified by someone who was not thinking about fashion.",
+      "Military and workwear patterns, brought in new. Heavier cloth, squarer cuts, and hardware specified by someone who was not thinking about fashion.",
     heroImage: "/products/collection-surplus.svg",
     position: 1,
   },
@@ -36,7 +36,7 @@ const COLLECTIONS = [
     name: "Vintage",
     tagline: "Older than it looks.",
     description:
-      "Pieces with a decade or more behind them. The fades are real and uneven, the cotton has relaxed, and nothing here can be reordered once its size is gone.",
+      "Retro cuts and washes, made new. The graphics and the fades are the ones you remember; the cotton is not — and nothing here is reordered once its size is gone.",
     heroImage: "/products/collection-thrift-tees.svg",
     position: 2,
   },

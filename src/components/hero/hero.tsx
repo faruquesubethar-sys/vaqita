@@ -48,10 +48,13 @@ export function Hero() {
           Surplus · Vintage · Tees · Polos · Trouser
         </p>
 
-        <h1 className="display mt-7 text-[clamp(3rem,10.5vw,10.5rem)] text-alabaster">
-          <SplitText text="Somebody wore" delay={0.15} />
+        {/* The shimmer runs once the letters have landed, not with them —
+            a band of light crossing a headline that is still assembling
+            reads as a glitch rather than as gloss. */}
+        <h1 className="display shimmer mt-7 text-[clamp(3rem,10.5vw,10.5rem)] text-alabaster [--shimmer-delay:1.5s]">
+          <SplitText text="Imported once." delay={0.15} />
           <span className="block italic text-brass-lit">
-            <SplitText text="it first." delay={0.38} />
+            <SplitText text="Never again." delay={0.38} />
           </span>
         </h1>
 
@@ -60,9 +63,9 @@ export function Hero() {
             className="animate-fade-up max-w-md text-[0.95rem] leading-relaxed text-stone"
             style={{ animationDelay: "900ms" }}
           >
-            Surplus, vintage, tees, polos and trousers. Real stock, photographed
-            piece by piece — and every one turns in 3D before you spend
-            anything.
+            Brought in from abroad in small lots, one of each size. Every piece
+            photographed itself and turns in 3D, so you see the real cloth
+            before you spend anything.
           </p>
 
           <div
