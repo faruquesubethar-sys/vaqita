@@ -48,6 +48,11 @@ away on every deploy, so the data now lives in a managed Postgres.
    sends you hunting in the wrong place. Setting both avoids it entirely.
 
    Only `DATABASE_URL` needs to go on your host.
+5. Change `sslmode=require` to `sslmode=verify-full` in both. Neon hands you
+   `require`; node-postgres treats that as full verification today, but in
+   pg v9 it becomes "encrypted but unverified". Writing `verify-full`
+   explicitly means a future dependency upgrade cannot quietly weaken the
+   connection.
 4. Create the tables and the sections:
 
    ```bash
