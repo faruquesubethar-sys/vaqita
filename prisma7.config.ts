@@ -9,6 +9,16 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Schema work (`prisma db push`, migrations) must use the DIRECT
+    // connection, not the pooled one.
+    //
+    // Neon's pooled endpoint runs PgBouncer in transaction mode, which has no
+    // session state. A migration over it fails with `prepared statement "s0"
+    // already exists` — an error that never mentions pooling and sends you
+    // looking in entirely the wrong place.
+    //
+    // The application itself still uses the pooled DATABASE_URL, which is what
+    // serverless hosting needs. Only the CLI reads this file.
+    url: process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"],
   },
 });

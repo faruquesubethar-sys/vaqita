@@ -29,12 +29,25 @@ The site used to keep its data in a file on disk. Free hosting throws its disk
 away on every deploy, so the data now lives in a managed Postgres.
 
 1. Sign up at **neon.tech**, create a project.
-2. Copy the **pooled** connection string. It looks like
-   `postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require`.
-   Take the *pooled* one, not the direct one — free hosting opens a lot of
-   short-lived connections and the pooler is what keeps that from exhausting
-   the database.
-3. Put it in your local `.env` as `DATABASE_URL`.
+2. Pick the region carefully. **It cannot be changed afterwards.** Choose the
+   one closest to your customers, and then set your host's region to match in
+   step 5 — a server and a database on different continents make every page
+   slower than either being far away on its own.
+3. Copy **both** connection strings. Neon gives you two for the same database
+   and they are not interchangeable:
+
+   - **Pooled** — hostname contains `-pooler`. Goes in `.env` as
+     `DATABASE_URL`. This is what the site uses; free hosting opens a
+     connection per request and the pooler is what stops that exhausting the
+     database.
+   - **Direct** — no `-pooler`. Goes in `.env` as `DATABASE_URL_UNPOOLED`.
+     Used only by the Prisma CLI for schema changes.
+
+   Schema changes over the pooled connection fail with
+   `prepared statement "s0" already exists`, which never mentions pooling and
+   sends you hunting in the wrong place. Setting both avoids it entirely.
+
+   Only `DATABASE_URL` needs to go on your host.
 4. Create the tables and the sections:
 
    ```bash
