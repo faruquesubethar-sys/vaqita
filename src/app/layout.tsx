@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Jost } from "next/font/google";
 
 import { CartProvider } from "@/components/cart/cart-provider";
 import { Footer } from "@/components/chrome/footer";
+import { Intro } from "@/components/brand/intro";
 import { Header } from "@/components/chrome/header";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { getCart } from "@/lib/cart";
@@ -63,6 +64,9 @@ export default async function RootLayout({
             >
               Skip to content
             </a>
+            {/* Sits above everything, over a page that has already
+                rendered — the shop is never waiting on the animation. */}
+            <Intro />
             <Header user={user} />
             <main id="main">{children}</main>
             <Footer />
