@@ -222,9 +222,9 @@ function TryItOverlay({
       role="dialog"
       aria-modal="true"
       aria-label={`Try on ${productName}`}
-      className="animate-fade-up fixed inset-0 z-90 flex flex-col bg-ink/97 backdrop-blur-xl focus:outline-none"
+      className="vq-room fixed inset-0 z-90 flex flex-col bg-ink/97 backdrop-blur-xl focus:outline-none"
     >
-      <header className="flex shrink-0 items-center justify-between border-b border-bone/10 px-[var(--shell-x)] py-5">
+      <header className="vq-room__chrome flex shrink-0 items-center justify-between border-b border-bone/10 px-[var(--shell-x)] py-5">
         <div>
           <p className="eyebrow text-brass-lit">Fitting room</p>
           <h2 className="display mt-1 text-2xl text-alabaster">{productName}</h2>
@@ -243,7 +243,7 @@ function TryItOverlay({
         <div className="relative min-h-[46vh]">
           <div
             aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_38%,#1b1d22_0%,#0d0d10_58%,#08080a_100%)]"
+            className="vq-room__light absolute inset-0 bg-[radial-gradient(70%_60%_at_50%_38%,#1b1d22_0%,#0d0d10_58%,#08080a_100%)]"
           />
           <GarmentViewer
             garmentType={asGarmentType(garmentType)}
@@ -260,7 +260,7 @@ function TryItOverlay({
         </div>
 
         {/* Controls */}
-        <aside className="min-h-0 overflow-y-auto border-t border-bone/10 px-[var(--shell-x)] py-7 lg:border-l lg:border-t-0 lg:px-8">
+        <aside className="vq-room__chrome min-h-0 overflow-y-auto border-t border-bone/10 px-[var(--shell-x)] py-7 lg:border-l lg:border-t-0 lg:px-8">
           {colours.length > 1 && (
             <fieldset className="mb-8">
               <legend className="eyebrow mb-4">

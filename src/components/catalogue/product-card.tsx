@@ -165,7 +165,7 @@ export function ProductCard({
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-sm tabular-nums text-alabaster">
+          <p className="foil text-sm tabular-nums">
             {formatMoney(product.priceCents)}
           </p>
           {onSale && (

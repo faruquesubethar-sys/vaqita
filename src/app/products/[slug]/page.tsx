@@ -138,7 +138,7 @@ export default async function ProductPage({
           )}
 
           <div className="mt-6 flex items-baseline gap-4">
-            <p className="text-xl tabular-nums text-alabaster">
+            <p className="foil text-xl tabular-nums">
               {formatMoney(product.priceCents)}
             </p>
             {product.compareAtCents && product.compareAtCents > product.priceCents && (

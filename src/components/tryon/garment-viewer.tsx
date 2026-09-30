@@ -105,6 +105,8 @@ function Garment({
 }) {
   const mesh = useRef<THREE.Mesh>(null);
   const material = useRef<THREE.ShaderMaterial>(null);
+  /** Elapsed time at the first rendered frame — see the arrival below. */
+  const bornAt = useRef<number | null>(null);
 
   // Rebuilding the mesh is the expensive part, so it is keyed only on shape —
   // changing colour must never regenerate geometry.
@@ -282,11 +284,31 @@ function Garment({
     m.uniforms.uPhotoFit.value = photoFit ? 1 : 0;
     m.uniforms.uBackColor.value.lerp(backColor, Math.min(delta * 6, 1));
 
+    if (!mesh.current) return;
+
+    // --- arrival -----------------------------------------------------------
+    //
+    // The garment rises into the stage light and settles, rather than simply
+    // being there when the room opens. Timed off the first rendered frame,
+    // not off mount: the mesh and its photograph are built asynchronously, so
+    // a clock started at mount would have spent the entrance on an empty
+    // stage and dropped the garment in fully arrived.
+    if (bornAt.current === null) bornAt.current = state.clock.elapsedTime;
+    const age = state.clock.elapsedTime - bornAt.current;
+    const p = Math.min(1, age / 1.1);
+    const settle = 1 - Math.pow(1 - p, 4);
+
+    // A little past square and back, so it lands rather than stops.
+    const overshoot = Math.sin(settle * Math.PI) * 0.09;
+
     // A touch of life so it never looks like a frozen render.
-    if (mesh.current) {
-      mesh.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.35) * 0.012;
-      mesh.current.position.y = Math.sin(state.clock.elapsedTime * 0.55) * 0.015;
-    }
+    const driftZ = Math.sin(state.clock.elapsedTime * 0.35) * 0.012;
+    const driftY = Math.sin(state.clock.elapsedTime * 0.55) * 0.015;
+
+    mesh.current.rotation.z = driftZ * settle;
+    mesh.current.rotation.y = (1 - settle) * -0.9 + overshoot;
+    mesh.current.position.y = driftY * settle - (1 - settle) * height * 0.55;
+    mesh.current.scale.setScalar(0.88 + settle * 0.12);
   });
 
   return (
