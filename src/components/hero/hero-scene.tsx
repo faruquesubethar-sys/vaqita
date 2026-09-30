@@ -163,25 +163,37 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
     const t = state.clock.elapsedTime;
     void dt;
 
-    // --- dramatic 3D entrance --------------------------------------------
+    // --- entrance: condensed out of the gold dust -------------------------
+    //
+    // The dust starts first and spirals inward; the mark forms at the point it
+    // converges on. So this does not swoop in from anywhere — it resolves in
+    // place, starting small and dim inside the vortex and settling as the dust
+    // is absorbed. A mark that flies in past its own dust breaks the illusion
+    // that the dust is what it is made of.
     if (startedAt.current === null) startedAt.current = t;
-    const duration = 1.8;
-    const p = Math.min(1, (t - startedAt.current) / duration);
+    const GATHER = 1.05; // dust alone, tightening
+    const FORM = 1.25; // mark resolving out of it
+    const p = Math.min(1, Math.max(0, (t - startedAt.current - GATHER) / FORM));
     // Cubic ease-out
     const ease = 1 - Math.pow(1 - p, 3);
 
-    // Dynamic swoop: starts in visible mid-depth (z = -2.2) and glides smoothly into place
-    const rebound = Math.sin(ease * Math.PI) * 0.08;
-    const enterZ = (1 - ease) * -2.2;
-    const enterX = (1 - ease) * 0.55;
-    const enterY = (1 - ease) * 0.45;
-    const enterScale = 0.55 + ease * 0.45;
+    // Slight overshoot as it settles, so it lands rather than stops.
+    const rebound = Math.sin(ease * Math.PI) * 0.05;
+    const enterZ = 0;
+    const enterX = 0;
+    const enterY = 0;
+    // Grows from a dense point at the vortex centre.
+    const enterScale = 0.12 + ease * 0.88;
 
-    // Banked entrance angle sweeping smoothly into view
-    const enterRotY = (1 - ease) * -0.85;
-    const enterRotZ = (1 - ease) * 0.28;
+    // A single slow turn as it forms, unwinding the dust's own spin.
+    const enterRotY = (1 - ease) * -1.15;
+    const enterRotZ = (1 - ease) * 0.12;
 
     inner.current.scale.setScalar(enterScale);
+
+    // Fade in with the growth, so early frames read as glow inside the dust
+    // rather than a tiny solid swan sitting in the middle of it.
+    inner.current.visible = p > 0.001;
 
     // --- idle float & sway ------------------------------------------------
     const idleY = Math.sin(t * 0.35) * 0.52 + rig.pointer.x * 0.28;
@@ -531,11 +543,12 @@ function Scene({ quality }: { quality: Quality }) {
       <Backdrop rig={rig} quality={quality} />
       <Shafts count={quality === "low" ? 2 : 3} />
       <HouseMark rig={rig} quality={quality} />
-      {/* Released as the dramatic entrance lands, shedding shimmering golden dust */}
+      {/* Arrives first and spirals inward; the mark forms where it converges. */}
       <GoldDust
         origin={[0.35, 0.08, 0]}
-        delay={1.5}
-        count={quality === "high" ? 360 : quality === "medium" ? 220 : 100}
+        delay={0.3}
+        emitFor={1.5}
+        count={quality === "high" ? 220 : quality === "medium" ? 140 : 70}
       />
       <Floor />
       <Motes count={quality === "high" ? 220 : quality === "medium" ? 130 : 60} />

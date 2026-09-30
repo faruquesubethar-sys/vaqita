@@ -5,55 +5,74 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 /**
- * Gold dust shed by the mark once its entrance lands.
+ * The gold dust the mark is formed out of.
  *
- * Simulated on the CPU into a single BufferGeometry rather than as individual
+ * It used to run the other way: the swan arrived, then shed dust, and every
+ * mote respawned when it died — so gold poured off the mark permanently. A
+ * continuous leak reads as a stuck particle effect rather than an event, and
+ * at 360 additive motes it drowned the mark it was supposed to introduce.
+ *
+ * Now it is a single gesture with an end. Motes spiral *inward* on a shell
+ * around the mark, tightening and fading as they reach it, so the mark looks
+ * like it condensed out of them. Emission runs for a fixed window and then
+ * stops; the remaining motes finish their travel and the cloud empties itself.
+ *
+ * Simulated on the CPU into one BufferGeometry rather than as individual
  * meshes: a few hundred objects would each cost a draw call, where one Points
- * cloud costs exactly one. Positions are written straight into the attribute
- * array each frame and flagged for upload.
- *
- * Each mote is recycled rather than destroyed, so the buffer is allocated once
- * and never grows — nothing here allocates after mount.
+ * cloud costs exactly one. Each mote is recycled, so the buffer is allocated
+ * once and nothing here allocates after mount.
  */
 
 type Props = {
-  /** Seconds from scene start before the first mote is released. */
+  /** Seconds from scene start before the first mote appears. */
   delay?: number;
+  /** How long motes keep being emitted. After this the cloud empties. */
+  emitFor?: number;
   count?: number;
-  /** Roughly where the mark sits, in world units. */
+  /** Where the mark sits, in world units — the point everything spirals into. */
   origin?: [number, number, number];
-  /** Half-extents of the region motes are born in. */
-  spread?: [number, number, number];
+  /** How far out motes are born, as x/y/z half-extents. */
+  radius?: [number, number, number];
 };
 
 export function GoldDust({
-  delay = 2.2,
-  count = 300,
+  delay = 0.35,
+  emitFor = 1.6,
+  count = 220,
   origin = [0, -0.34, 0],
-  spread = [1.1, 0.85, 0.45],
+  radius = [1.5, 1.0, 1.2],
 }: Props) {
   const points = useRef<THREE.Points>(null);
   const material = useRef<THREE.ShaderMaterial>(null);
 
-  // Per-mote simulation state, kept outside the geometry so the attribute
-  // arrays hold nothing but what the GPU needs.
-  const sim = useMemo(() => {
-    const velocity = new Float32Array(count * 3);
-    const life = new Float32Array(count);
-    const maxLife = new Float32Array(count);
-    const spin = new Float32Array(count);
-    return { velocity, life, maxLife, spin };
-  }, [count]);
+  /**
+   * Per-mote state in cylindrical coordinates.
+   *
+   * A spiral is almost free this way — the radius shrinks while the angle
+   * advances — where the same path in cartesian velocities would need a
+   * tangential force recomputed every frame.
+   */
+  const sim = useMemo(
+    () => ({
+      angle: new Float32Array(count),
+      angSpeed: new Float32Array(count),
+      startRadius: new Float32Array(count),
+      startY: new Float32Array(count),
+      endY: new Float32Array(count),
+      squashZ: new Float32Array(count),
+      life: new Float32Array(count),
+      maxLife: new Float32Array(count),
+      baseSize: new Float32Array(count),
+      active: new Uint8Array(count),
+    }),
+    [count],
+  );
 
   const geometry = useMemo(() => {
-    const position = new Float32Array(count * 3);
-    const size = new Float32Array(count);
-    const alpha = new Float32Array(count);
-
     const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.BufferAttribute(position, 3));
-    g.setAttribute("aSize", new THREE.BufferAttribute(size, 1));
-    g.setAttribute("aAlpha", new THREE.BufferAttribute(alpha, 1));
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+    g.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(count), 1));
+    g.setAttribute("aAlpha", new THREE.BufferAttribute(new Float32Array(count), 1));
     // Motes start invisible; the frame loop releases them over time.
     g.setDrawRange(0, 0);
     return g;
@@ -61,26 +80,24 @@ export function GoldDust({
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
-  /** Places one mote back at the mark with a fresh drift. */
-  const respawn = useMemo(() => {
-    return (i: number, pos: Float32Array, size: Float32Array, isInitialBurst = false) => {
-      // Born across the mark's faceted wings and body
-      pos[i * 3] = origin[0] + (Math.random() - 0.5) * 2 * spread[0];
-      pos[i * 3 + 1] = origin[1] + (Math.random() - 0.4) * 2 * spread[1];
-      pos[i * 3 + 2] = origin[2] + (Math.random() - 0.5) * 2 * spread[2];
-
-      // Golden dust floats gently off the swan with slight outward momentum and slow downward drift
-      const speedMult = isInitialBurst ? 1.4 : 1.0;
-      sim.velocity[i * 3] = (Math.random() - 0.48) * 0.14 * speedMult;
-      sim.velocity[i * 3 + 1] = (-0.04 - Math.random() * 0.12) * speedMult;
-      sim.velocity[i * 3 + 2] = (Math.random() - 0.5) * 0.1 * speedMult;
-
-      sim.maxLife[i] = 3.2 + Math.random() * 4.0;
+  /** Puts one mote back on the outer shell, ready to spiral in. */
+  const spawn = useMemo(
+    () => (i: number) => {
+      sim.angle[i] = Math.random() * Math.PI * 2;
+      // Mixed spin directions, so it reads as a swirl rather than a turntable.
+      sim.angSpeed[i] = (0.9 + Math.random() * 1.4) * (Math.random() < 0.5 ? -1 : 1);
+      // sqrt keeps motes from bunching at the centre of the disc.
+      sim.startRadius[i] = radius[0] * (0.55 + Math.sqrt(Math.random()) * 0.45);
+      sim.startY[i] = origin[1] + (Math.random() - 0.5) * 2 * radius[1];
+      sim.endY[i] = origin[1] + (Math.random() - 0.5) * 0.5;
+      sim.squashZ[i] = radius[2] / Math.max(radius[0], 1e-3);
+      sim.maxLife[i] = 1.1 + Math.random() * 0.9;
       sim.life[i] = 0;
-      sim.spin[i] = Math.random() * Math.PI * 2;
-      size[i] = 0.8 + Math.random() * 2.2;
-    };
-  }, [origin, spread, sim]);
+      sim.baseSize[i] = 1.0 + Math.random() * 1.8;
+      sim.active[i] = 1;
+    },
+    [origin, radius, sim],
+  );
 
   const started = useRef<number | null>(null);
   const released = useRef(0);
@@ -99,46 +116,64 @@ export function GoldDust({
     const size = g.getAttribute("aSize").array as Float32Array;
     const alpha = g.getAttribute("aAlpha").array as Float32Array;
 
-    // Dramatic entrance shed: as the swan arrives, immediately release a cascade
-    // of shimmering golden dust motes, expanding quickly to full count.
-    const elapsedSinceLanding = since - delay;
-    const shedProgress = Math.min(1, elapsedSinceLanding / 1.5);
-    // Exponential rush then smooth sustain
-    const target = Math.min(count, Math.floor(count * Math.pow(shedProgress, 0.6)));
+    const emitting = since - delay < emitFor;
 
-    while (released.current < target) {
-      respawn(released.current, pos, size, true);
-      released.current += 1;
+    // Release across the emission window rather than all at once, so the
+    // cloud builds instead of popping into existence fully formed.
+    if (emitting) {
+      const progress = (since - delay) / emitFor;
+      const target = Math.min(count, Math.ceil(count * Math.min(1, progress * 1.25)));
+      while (released.current < target) {
+        spawn(released.current);
+        released.current += 1;
+      }
     }
 
-    for (let i = 0; i < released.current; i++) {
-      sim.life[i] += dt;
+    let visible = 0;
 
-      if (sim.life[i] >= sim.maxLife[i]) {
-        respawn(i, pos, size, false);
+    for (let i = 0; i < released.current; i++) {
+      if (!sim.active[i]) {
+        alpha[i] = 0;
         continue;
       }
 
-      // Air resistance and subtle gravity
-      sim.velocity[i * 3 + 1] -= 0.015 * dt;
-
-      // Organic lateral sway and air swirl around the 3D swan
-      const sway = Math.sin(t * 1.2 + sim.spin[i]) * 0.035;
-      const swirlZ = Math.cos(t * 0.9 + sim.spin[i]) * 0.02;
-
-      pos[i * 3] += (sim.velocity[i * 3] + sway) * dt;
-      pos[i * 3 + 1] += sim.velocity[i * 3 + 1] * dt;
-      pos[i * 3 + 2] += (sim.velocity[i * 3 + 2] + swirlZ) * dt;
-
-      // Soft fade in and gentle fade out as it sheds
+      sim.life[i] += dt;
       const u = sim.life[i] / sim.maxLife[i];
-      alpha[i] = Math.min(u / 0.1, 1) * Math.pow(1 - u, 1.4);
+
+      if (u >= 1) {
+        // Once emission has stopped, a finished mote stays finished. That is
+        // what gives the effect an ending.
+        if (emitting) spawn(i);
+        else {
+          sim.active[i] = 0;
+          alpha[i] = 0;
+        }
+        continue;
+      }
+
+      // Radius eases to zero: fast at first, slowing as it arrives, so motes
+      // appear to be drawn in and absorbed rather than falling into a point.
+      const shrink = Math.pow(1 - u, 1.6);
+      const r = sim.startRadius[i] * shrink;
+      const a = sim.angle[i] + sim.angSpeed[i] * sim.life[i];
+
+      pos[i * 3] = origin[0] + Math.cos(a) * r;
+      pos[i * 3 + 1] = sim.startY[i] + (sim.endY[i] - sim.startY[i]) * u;
+      pos[i * 3 + 2] = origin[2] + Math.sin(a) * r * sim.squashZ[i];
+
+      // In quickly, out as it merges with the mark.
+      alpha[i] = Math.min(u / 0.18, 1) * Math.pow(1 - u, 1.1);
+      size[i] = sim.baseSize[i] * (0.65 + shrink * 0.35);
+      visible++;
     }
 
     g.getAttribute("position").needsUpdate = true;
     g.getAttribute("aSize").needsUpdate = true;
     g.getAttribute("aAlpha").needsUpdate = true;
     g.setDrawRange(0, released.current);
+
+    // Nothing left to draw and nothing more coming: stop touching the GPU.
+    if (!emitting && visible === 0) g.setDrawRange(0, 0);
 
     if (material.current) material.current.uniforms.uTime.value = t;
   });
@@ -173,37 +208,36 @@ export function GoldDust({
             vSeed = fract(sin(dot(position.xy, vec2(12.9898, 78.233))) * 43758.5453);
 
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
-            // Attenuate with distance so near motes read as closer.
-            gl_PointSize = aSize * (150.0 / max(-mv.z, 0.001));
+            gl_PointSize = aSize * (300.0 / max(-mv.z, 0.001));
             gl_Position = projectionMatrix * mv;
           }
         `}
         fragmentShader={/* glsl */ `
+          uniform float uTime;
           uniform vec3 uWarm;
           uniform vec3 uDeep;
-          uniform float uTime;
           varying float vAlpha;
           varying float vSeed;
 
           void main() {
-            // Round, soft-edged sprite from the point coordinate.
-            vec2 p = gl_PointCoord - 0.5;
-            float d = length(p);
-            if (d > 0.5) discard;
+            // Round mote with a soft edge.
+            vec2 d = gl_PointCoord - vec2(0.5);
+            float r = length(d) * 2.0;
+            float disc = smoothstep(1.0, 0.1, r);
+            if (disc <= 0.001) discard;
 
-            float core = smoothstep(0.5, 0.0, d);
+            // Each mote twinkles on its own clock.
+            float twinkle = 0.72 + 0.28 * sin(uTime * 3.1 + vSeed * 30.0);
+            vec3 tint = mix(uDeep, uWarm, vSeed);
 
-            // Each flake twinkles on its own clock — real gold dust catches
-            // the light intermittently as it tumbles.
-            float twinkle = 0.55 + 0.45 * sin(uTime * 3.2 + vSeed * 31.4);
-
-            vec3 colour = mix(uDeep, uWarm, vSeed);
-            float a = core * vAlpha * twinkle;
-
-            gl_FragColor = vec4(colour * (0.6 + twinkle * 0.7), a);
+            // Lower ceiling than before: these are additive, and a crowd of
+            // them at full strength turns the mark into a glare.
+            gl_FragColor = vec4(tint * twinkle, vAlpha * disc * 0.62);
           }
         `}
       />
     </points>
   );
 }
+
+export default GoldDust;
