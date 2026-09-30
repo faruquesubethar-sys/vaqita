@@ -93,8 +93,11 @@ function adminCredentials() {
         "the password that is published in this repository.",
     );
   }
-  if (password && password.length < 12) {
-    throw new Error("ADMIN_PASSWORD must be at least 12 characters.");
+  // Ten, not the twelve this used to demand. The shop owner chose a shorter
+  // password and it is their shop to run — but the floor stays, because the
+  // real risk here is a one-word password, not a nine-character one.
+  if (password && password.length < 10) {
+    throw new Error("ADMIN_PASSWORD must be at least 10 characters.");
   }
 
   return { email, password, isLocalDb };

@@ -212,39 +212,56 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
   return (
     <group ref={group} position={[0.35, 0.08, 0]} scale={0.56}>
       <group ref={inner}>
-        {/* Faceted gold body and neck — solid 24k luster matching reference brooch */}
+        {/*
+          Colours sampled from the reference brooch rather than chosen.
+          Percentiles across the photograph gave gold body #bea489, shadow
+          #a47957, highlight #fbeabf; panels #3b4f44; eye #0d764e.
+
+          The previous values were #eab308 gold and #059669 panels — a bright
+          yellow and a mint green. The real piece is champagne gold against
+          near-black forest, and the whole character of it lives in how muted
+          those panels are next to the one vivid stone.
+        */}
         <mesh geometry={geo.shell}>
           <meshStandardMaterial
-            color="#eab308"
-            emissive="#a16207"
-            emissiveIntensity={0.2}
-            metalness={0.88}
-            roughness={0.22}
-            envMapIntensity={2.2}
+            color="#bea489"
+            emissive="#4a3520"
+            emissiveIntensity={0.05}
+            metalness={0.84}
+            roughness={0.44}
+            envMapIntensity={0.7}
           />
         </mesh>
 
-        {/* The emerald wing panels — vibrant green diamond jewel tone */}
+        {/*
+          The wing panels: matte inlay, not gemstone. In the reference they
+          are flat and almost velvet — they read dark and absorb light, which
+          is exactly what makes the gold edges around them look like metal.
+          Giving them gloss and emissive, as before, turned the wing into
+          backlit plastic.
+        */}
         <mesh geometry={geo.facets}>
           <meshStandardMaterial
-            color="#059669"
-            emissive="#047857"
-            emissiveIntensity={0.7}
-            roughness={0.12}
-            metalness={0.25}
-            envMapIntensity={3.2}
+            color="#3b4f44"
+            emissive="#101a14"
+            emissiveIntensity={0.08}
+            roughness={0.82}
+            metalness={0.06}
+            envMapIntensity={0.5}
+            side={THREE.DoubleSide}
           />
         </mesh>
 
-        {/* The emerald cut diamond eye — intense sparkling jewel */}
+        {/* The one real stone on the piece. It earns its brightness by being
+            the only thing on the swan that has any. */}
         <mesh geometry={geo.eye}>
           <meshStandardMaterial
-            color="#34d399"
-            emissive="#10b981"
-            emissiveIntensity={1.8}
-            roughness={0.04}
-            metalness={0.1}
-            envMapIntensity={4.5}
+            color="#0d764e"
+            emissive="#0d8f5c"
+            emissiveIntensity={1.5}
+            roughness={0.06}
+            metalness={0.15}
+            envMapIntensity={4.0}
           />
         </mesh>
 
@@ -274,9 +291,15 @@ function StudioEnvironment() {
     const target = pmrem.fromScene(room, 0.04);
 
     scene.environment = target.texture;
+    // RoomEnvironment is a white studio box. A metal at 0.84 metalness is
+    // mostly a mirror, so at full strength the mark reflects that room and
+    // saturates to white no matter how far the lights are turned down —
+    // which is exactly what happened while chasing this through the lights.
+    scene.environmentIntensity = 0.38;
 
     return () => {
       scene.environment = null;
+      scene.environmentIntensity = 1;
       target.dispose();
       pmrem.dispose();
       room.traverse((o) => {
@@ -298,10 +321,22 @@ function StudioEnvironment() {
 function MarkLights() {
   return (
     <>
-      <ambientLight intensity={0.85} color="#fffbeb" />
-      <directionalLight position={[-2, 3, 4]} intensity={2.5} color="#fff7ed" />
-      <directionalLight position={[3, 1, 2]} intensity={1.8} color="#dbeafe" />
-      <pointLight position={[0.5, 0.5, 3]} intensity={2.5} color="#fef08a" distance={12} />
+      {/*
+        Dialled well back. At the previous levels — ambient 0.85 plus three
+        sources totalling 6.8 — polished gold saturated to white and the mark
+        read as a paper cut-out lit by a flashbulb. Metal needs a dark
+        surround and a few hot highlights, not an evenly bright one: the
+        reference brooch is mid-tone #bea489 across most of its surface, and
+        only the facet edges go pale.
+      */}
+      <ambientLight intensity={0.16} color="#fff4e2" />
+      {/* Key, high and to the left, matching the reference photograph. */}
+      <directionalLight position={[-2, 3, 4]} intensity={1.0} color="#fff2dd" />
+      {/* Cool fill, to keep the shadow side from going flat black. */}
+      <directionalLight position={[3, 1, 2]} intensity={0.55} color="#cfe0f5" />
+      {/* Close warm source: this is what travels across the facets as it
+          turns, and does most of the work of making it look like metal. */}
+      <pointLight position={[0.5, 0.5, 3]} intensity={0.6} color="#ffe6a8" distance={12} />
     </>
   );
 }
@@ -606,9 +641,9 @@ export default function HeroScene() {
           {/* Restrained on purpose: enough to make the brass rim glow, not
               enough to turn every mote into an orb. */}
           <Bloom
-            intensity={0.34}
-            luminanceThreshold={0.62}
-            luminanceSmoothing={0.28}
+            intensity={0.5}
+            luminanceThreshold={0.78}
+            luminanceSmoothing={0.22}
             mipmapBlur
           />
           <Vignette offset={0.22} darkness={0.82} />

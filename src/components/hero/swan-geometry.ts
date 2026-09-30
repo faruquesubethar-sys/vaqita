@@ -12,75 +12,71 @@ import * as THREE from "three";
  * the way in.
  */
 
-// Outline points, in the SVG's 250 x 200 space.
-const BODY: [number, number][] = [
-  [96, 150],
-  [150, 177],
-  [206, 154],
-  [232, 118],
-  [210, 32],
-  [120, 128],
+/**
+ * The mark, traced from the reference brooch rather than drawn by eye.
+ *
+ * The photograph was segmented (the piece sits on near-white paper, so a
+ * luminance threshold separates it cleanly), the largest component's contour
+ * simplified with Douglas-Peucker, and the result mapped into this 250 x 200
+ * space preserving aspect. The green inlays were lifted separately by hue.
+ *
+ * So these numbers are measurements, not approximations of a memory of the
+ * photograph — which is what the previous outline was, and why the head came
+ * out blocky and the neck twice the thickness it should have been.
+ */
+const OUTLINE: [number, number][] = [
+  [84.9, 0],
+  [61.3, 13.7],
+  [42.2, 62.6],
+  [46, 76.3],
+  [74.2, 59.5],
+  [87.2, 70.2],
+  [49.8, 109.9],
+  [40.6, 161.8],
+  [72.7, 198.5],
+  [152.9, 196.2],
+  [209.4, 136.6],
+  [190.3, 130.5],
+  [210.1, 94.7],
+  [210.1, 3.8],
+  [88.7, 116.8],
+  [125.4, 58.8],
+  [124.6, 25.2],
+  [114.7, 36.6],
 ];
 
 /**
- * The beak is blunted to a short flat rather than a single point.
+ * The green inlays, in descending size.
  *
- * ExtrudeGeometry's bevel offsets each vertex along its angle bisector, and at
- * a spike that acute the offset diverges — which produced NaN positions and a
- * silently invisible mesh. A 9-unit flat is invisible at display size and
- * keeps the bevel well-conditioned.
+ * The four large ones are the wing fan; the rest are the body panels. They
+ * are separate planes rather than one shape on purpose — each is tilted to
+ * its own angle in `buildFoldedFacets`, which is what makes light break
+ * across the wing instead of washing it evenly.
  */
-const NECK: [number, number][] = [
-  [24, 94],
-  [58, 78],
-  [54, 56],
-  [96, 42],
-  [122, 74],
-  [118, 126],
-  [136, 158],
-  [104, 160],
-  [88, 124],
-  [86, 98],
-  [54, 106],
-  [24, 103],
+const PANELS: [number, number][][] = [
+  // Wing fan, outer to inner.
+  [[203.2, 14.5], [153.6, 64.1], [138.4, 100.8], [204.8, 35.9]],
+  [[194.8, 56.5], [136.1, 113], [126.9, 133.6], [181.9, 92.4]],
+  [[204.8, 86.3], [187.2, 100], [178.1, 124.4], [184.2, 122.1], [198.7, 108.4]],
+  [[204.8, 51.9], [194.1, 83.2], [204.8, 73.3]],
+  // Tail and lower body.
+  [[193.3, 142], [171.2, 142.7], [158.2, 167.9], [164.3, 171]],
+  [[158.2, 144.3], [136.1, 148.9], [131.5, 151.9], [150.6, 162.6]],
+  // Breast.
+  [[90.3, 134.4], [84.2, 167.2], [107.1, 148.1]],
+  [[110.1, 109.2], [104, 113], [94.8, 125.2], [110.9, 138.2]],
 ];
 
-/**
- * The wing's fold facets.
- *
- * These are NOT decorative panels laid over the body — they are a fan that
- * partitions the wing exactly, radiating from the wing root at [120,128],
- * which is the single reflex vertex of the body outline and therefore the
- * point every crease in a folded wing would run from.
- *
- * Each facet is inset before extrusion, so the gold body shows through between
- * them as a crease. That is what makes the green read as a *face of the fold*
- * rather than a green box stuck on a gold swan.
- */
-const WING_ROOT: [number, number] = [120, 128];
-
-const WING_FACETS: { points: [number, number][]; emerald: boolean }[] = [
-  // Lower wing base, stays gold (body base with gold glitter stardust).
-  { points: [WING_ROOT, [96, 150], [150, 177]], emerald: false },
-  // Lower wing facet (emerald diamond panel).
-  { points: [WING_ROOT, [150, 177], [206, 154]], emerald: true },
-  // Tail facet (emerald diamond panel).
-  { points: [WING_ROOT, [206, 154], [232, 118]], emerald: true },
-  // Upper mid facet (emerald diamond panel).
-  { points: [WING_ROOT, [232, 118], [221, 75]], emerald: true },
-  // Upper wing tip facet (emerald diamond panel — green in reference image).
-  { points: [WING_ROOT, [221, 75], [210, 32]], emerald: true },
-];
-
-// Note: The head, beak and neck are 100% solid faceted gold, exactly like the reference brooch.
-// Only the eye is an emerald gemstone.
-
-
+/** The one cut stone, at the head. Traced from the same photograph. */
 const EYE: [number, number][] = [
-  [66, 62],
-  [84, 58],
-  [88, 74],
-  [70, 78],
+  [55.2, 35.9],
+  [58.2, 41.2],
+  [65.8, 41.2],
+  [69.7, 45.8],
+  [72.7, 43.5],
+  [69.7, 32.1],
+  [66.6, 29.8],
+  [60.5, 31.3],
 ];
 
 const CX = 125;
@@ -90,13 +86,18 @@ const SHELL_DEPTH = 0.26;
 const BEVEL_THICKNESS = 0.02;
 
 /**
- * Width of the gold crease left between adjacent facets, in SVG units.
+ * A last hair of inset on each panel.
  *
- * Measured off the reference brooch: the gold reads as thin lines dividing
- * large green planes, not as a broad gold body with small green wedges set
- * into it. 4.2 gave the latter.
+ * Most of the gold crease is already in the traced coordinates: the wing is
+ * one connected green region in the photograph, cut through by gold lines, so
+ * the panels were separated by eroding across those lines. The erosion left
+ * the gap. This only crisps the edge.
  */
-const CREASE = 2.3;
+// Negative: the panels are grown back out slightly.
+// Separating the wing wedges meant eroding across the gold lines, and that
+// erosion plus the anti-aliased edge the colour mask discards left the gold
+// creases about three times the width they are on the real piece.
+const CREASE = -2.2;
 
 /* -------------------------------------------------------------- geometry */
 
@@ -187,7 +188,8 @@ function insetPolygon(points: [number, number][], d: number): [number, number][]
 
 export type SwanGeometries = {
   shell: THREE.ExtrudeGeometry;
-  facets: THREE.ExtrudeGeometry;
+  /** Folded, not extruded — see buildFoldedFan. */
+  facets: THREE.BufferGeometry;
   eye: THREE.ExtrudeGeometry;
   dispose: () => void;
 };
@@ -199,10 +201,76 @@ export type SwanGeometries = {
  * centred independently — centring them separately would drift the facets and
  * the eye off the body, since each has a different bounding box.
  */
+/**
+ * Builds the green inlays as separate tilted planes.
+ *
+ * The brooch itself is flat — it is a pin. Rendering it flat, though, gives
+ * every panel the same surface normal, so they all take the key light at the
+ * same angle and shade to one value: a sticker with thickness, which is what
+ * this was before.
+ *
+ * Each panel is therefore kept perfectly planar, as it is on the real piece,
+ * but set at its own slight angle. Planar, so it still reads as a flat inlay
+ * rather than a dome; angled, so neighbours catch the light independently and
+ * the wing breaks up as it turns. Parallel panels cannot do that at any
+ * material setting, which is why no amount of roughness tuning fixed it.
+ *
+ * Tilts are derived from the panel index rather than random, so the mark
+ * looks identical on every load.
+ */
+function buildFoldedFacets(): THREE.BufferGeometry {
+  const positions: number[] = [];
+  const BASE = 0.016;
+
+  PANELS.forEach((panel, index) => {
+    const inset = insetPolygon(panel, CREASE);
+    if (inset.length < 3) return;
+
+    // Centroid, in the same 250 x 200 space the points are given in.
+    let cx = 0;
+    let cy = 0;
+    for (const [x, y] of inset) {
+      cx += x;
+      cy += y;
+    }
+    cx /= inset.length;
+    cy /= inset.length;
+
+    // Two irrational multipliers keep successive panels from ever landing on
+    // the same pair of angles, without needing a random source.
+    const tiltX = Math.sin(index * 2.399) * 0.34;
+    const tiltY = Math.cos(index * 1.618) * 0.28;
+
+    const to3 = ([x, y]: [number, number]): [number, number, number] => [
+      (x - CX) * SCALE,
+      -(y - CY) * SCALE,
+      // A plane through the centroid: still exactly flat, just not parallel
+      // to its neighbours.
+      BASE + ((x - cx) * tiltX + (y - cy) * tiltY) * SCALE,
+    ];
+
+    // Fan from the centroid. Every vertex lies on the same plane, so this
+    // stays planar however the polygon is shaped.
+    const centre = to3([cx, cy]);
+    for (let i = 0; i < inset.length; i++) {
+      const a = to3(inset[i]);
+      const b = to3(inset[(i + 1) % inset.length]);
+      positions.push(...centre, ...a, ...b);
+    }
+  });
+
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  // Non-indexed on purpose: shared vertices would average normals across the
+  // panel edges and smooth away the facets this exists to create.
+  g.computeVertexNormals();
+  return g;
+}
+
 export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometries {
   const bevelSegments = quality === "high" ? 3 : 1;
 
-  const shell = new THREE.ExtrudeGeometry([toShape(BODY), toShape(NECK)], {
+  const shell = new THREE.ExtrudeGeometry([toShape(OUTLINE)], {
     depth: SHELL_DEPTH,
     bevelEnabled: true,
     bevelThickness: BEVEL_THICKNESS,
@@ -211,25 +279,8 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
     curveSegments: 1,
   });
 
-  // Emerald facets: the wing fold planes, inset so gold ribs show between them.
-  const emeraldShapes = WING_FACETS.filter((f) => f.emerald).map((f) =>
-    toShape(insetPolygon(f.points, CREASE)),
-  );
-  // Head and neck are solid gold; only the eye is an emerald diamond gemstone.
-
-  /**
-   * Cut as diamond-faceted gemstones with table-cut bevels.
-   * Steep flat sides rising to a flat top break light into multiple
-   * brilliant specular highlights per facet.
-   */
-  const facets = new THREE.ExtrudeGeometry(emeraldShapes, {
-    depth: 0.035,
-    bevelEnabled: true,
-    bevelThickness: 0.035,
-    bevelSize: 0.02,
-    bevelSegments: quality === "high" ? 2 : 1,
-    curveSegments: 1,
-  });
+  // The wing's green panels, each genuinely folded rather than extruded flat.
+  const facets = buildFoldedFacets();
 
   const eye = new THREE.ExtrudeGeometry([toShape(EYE)], {
     depth: 0.045,
