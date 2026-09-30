@@ -58,6 +58,20 @@ genuinely transparent (not white):
 Check the result before uploading: the outline is what becomes the model, so a
 sloppy cut around a sleeve becomes a sloppy sleeve.
 
+## Two photographs, not one
+
+Each product takes a front image and a back image. The admin panel asks
+where each upload belongs: front of the 3D model, back of it, or gallery
+only.
+
+Shoot the back the same way as the front — flat, straight down, same light,
+same background. It is mapped onto the reverse of the model, so a back photo
+taken at a different angle or under different light will not match the front
+when the garment turns.
+
+Without a back photo the reverse is flat cloth colour, and on resold tees the
+back is often where the graphic is.
+
 ## What the 3D can and cannot do
 
 - **Exact:** the front outline, the print, the colour, the placement of

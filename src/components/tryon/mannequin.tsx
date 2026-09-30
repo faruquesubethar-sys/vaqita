@@ -1,7 +1,100 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+/**
+ * A real dress-form model, if one has been supplied.
+ *
+ * Drop a .glb at `public/models/mannequin.glb` and it is used instead of the
+ * shape below. Nothing else needs changing: it is measured on load and fitted
+ * to the garment, so any dress form of any scale or origin will line up.
+ *
+ * Absent, the procedural form is used. The file is deliberately optional
+ * rather than required — a missing model must degrade to something workable,
+ * not to an empty fitting room.
+ */
+const MODEL_URL = "/models/mannequin.glb";
+
+/** How tall the form stands relative to the garment on it. */
+const FORM_HEIGHT = 2.5;
+/** Where the garment's own centre sits on that form, 0 feet, 1 shoulders. */
+const SHOULDER_LINE = 0.78;
+
+function useDressForm(height: number) {
+  const [model, setModel] = useState<THREE.Group | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Probed before loading. This does not remove the 404 when no model is
+    // present — the probe itself is the 404 — but it keeps a missing
+    // optional file from reaching the GLTF loader, which would otherwise
+    // follow it with parse errors for an HTML error page it was handed
+    // instead of a model.
+    const load = async () => {
+      try {
+        const head = await fetch(MODEL_URL, { method: "HEAD" });
+        if (!head.ok || cancelled) return;
+      } catch {
+        return;
+      }
+
+      new GLTFLoader().load(
+        MODEL_URL,
+        (gltf) => {
+          if (cancelled) return;
+          const scene = gltf.scene;
+
+          // Measured and refitted rather than trusted. Models come in at
+          // wildly different scales and origins — metres, centimetres, feet at
+          // the origin or the navel — so anything hardcoded here would only
+          // work for one particular file.
+          const box = new THREE.Box3().setFromObject(scene);
+          const size = new THREE.Vector3();
+          const centre = new THREE.Vector3();
+          box.getSize(size);
+          box.getCenter(centre);
+          if (!(size.y > 0)) return;
+
+          const scale = (height * FORM_HEIGHT) / size.y;
+          scene.scale.setScalar(scale);
+          scene.position.set(
+            -centre.x * scale,
+            -box.min.y * scale - height * FORM_HEIGHT * SHOULDER_LINE + height * 0.5,
+            -centre.z * scale,
+          );
+
+          scene.traverse((o) => {
+            const mesh = o as THREE.Mesh;
+            if (!mesh.isMesh) return;
+            // One matte material throughout. A dress form with its own
+            // textures would compete with the garment it is displaying.
+            mesh.material = new THREE.MeshStandardMaterial({
+              color: "#6f655a",
+              roughness: 0.95,
+              metalness: 0.02,
+            });
+          });
+
+          setModel(scene);
+        },
+        undefined,
+        // Present but unreadable. The procedural form covers it.
+        () => undefined,
+      );
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [height]);
+
+  return model;
+}
 
 /**
  * The form the garment is worn on.
@@ -65,6 +158,12 @@ export function Mannequin({
     g.scale(1.0, 0.8, 0.34);
     return g;
   }, [height]);
+
+  const dressForm = useDressForm(height);
+
+  // A supplied model replaces the built shape entirely rather than sitting
+  // alongside it; two forms inside one garment would intersect.
+  if (dressForm) return <primitive object={dressForm} />;
 
   return (
     <group>
