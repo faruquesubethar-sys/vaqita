@@ -258,7 +258,12 @@ void main() {
   } else if (uHasTexture == 1 && vSide <= 0.0) {
     // Back of the shirt: the photograph only shows one side, so this is the
     // garment's own cloth colour rather than a mirrored, fake print.
-    base = uBackColor;
+    //
+    // Lifted toward the front's brightness. Now the garment is draped over a
+    // body its sides are steep, so a band of back sheet is visible all round
+    // the silhouette — and left at plain shadow value it read as a grey halo
+    // rather than as the same cloth turning away from the light.
+    base = uBackColor * 1.25;
     photoMix = 0.0;
   }
 

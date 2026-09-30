@@ -566,6 +566,70 @@ function meshFromSdf(input: MeshInput): {
 }
 
 /**
+ * The torso width for a parametric garment, as a fraction of the sampling
+ * domain, or null for anything not worn on a torso.
+ *
+ * Legs are not a chest, so trousers and track pants get no body: running a
+ * torso profile down a trouser leg would balloon it.
+ */
+function parametricTorso(type: GarmentType): number | null {
+  switch (type) {
+    case "TEE":
+    case "LONG_SLEEVE":
+    case "SHIRT":
+    case "POLO":
+    case "TANK":
+    case "HOODIE":
+    case "TRACK_TOP":
+      return 2.0;
+    default:
+      return null;
+  }
+}
+
+/**
+ * The body a garment is worn on, as a depth at each point.
+ *
+ * Not a mannequin mesh — just the shape the cloth has to sit over. An
+ * elliptical cross-section whose width and depth vary with height: narrow at
+ * the hem, fullest through the chest, squaring off at the shoulders.
+ *
+ * The sleeves are deliberately left out of it. They hang off the arms, which
+ * are much thinner than the torso, so running the chest profile across the
+ * full width of a tee would blow the sleeves up into balloons. Beyond the
+ * body's half-width the depth falls away and the existing outline inflation
+ * takes over, which is about right for a sleeve.
+ */
+function torsoProfile(worldWidth: number, height: number) {
+  const halfW = worldWidth / 2;
+  // A tee is far wider than the body in it: the rest is sleeve.
+  const bodyHalf = halfW * 0.56;
+
+  return (x: number, y: number) => {
+    // 0 at the hem, 1 at the shoulders.
+    const v = Math.min(1, Math.max(0, y / height + 0.5));
+
+    // Waist in, chest out, shoulders square.
+    const widthAt = bodyHalf * (0.84 + 0.16 * smoothStep(v * 1.15));
+    const t = Math.abs(x) / widthAt;
+    if (t >= 1) return 0;
+
+    // Deepest through the chest rather than at either end.
+    const fullness = 0.62 + 0.38 * Math.sin(Math.PI * Math.min(1, v * 0.95 + 0.05));
+    const maxDepth = widthAt * 0.58 * fullness;
+
+    // Elliptical section. The square root is what makes it read as a body
+    // rather than a slab with rounded corners.
+    return maxDepth * Math.sqrt(1 - t * t);
+  };
+}
+
+function smoothStep(t: number): number {
+  const u = Math.min(1, Math.max(0, t));
+  return u * u * (3 - 2 * u);
+}
+
+/**
  * Builds a garment mesh from its hardcoded parametric silhouette.
  *
  * Used when a product has no cut-out photograph to trace.
@@ -584,6 +648,8 @@ export function buildGarmentGeometry(
   const minY = -1.35;
   const maxY = 1.3;
 
+  const bodyWidth = parametricTorso(type);
+
   const { geometry, bounds } = meshFromSdf({
     sdf: spec.sdf,
     minX,
@@ -594,6 +660,11 @@ export function buildGarmentGeometry(
     rows: Math.round((resolution * (maxY - minY)) / (maxX - minX)),
     depth: spec.depth,
     falloff: spec.falloff,
+    // A body here too. Most stock arrives as an ordinary photograph with no
+    // cut-out, so this is the path most garments actually take — leaving it
+    // as a flat cushion meant the improvement only ever showed on the
+    // minority of products that had a transparent PNG behind them.
+    torso: bodyWidth ? torsoProfile(bodyWidth, spec.height) : undefined,
     uvFor: (x, y) => [(x - minX) / (maxX - minX), (y - minY) / (maxY - minY)],
   });
 
@@ -687,47 +758,6 @@ function smoothField(field: Float32Array, width: number, height: number): Float3
  * inflation — one photograph cannot say how deep a garment is. This is a
  * faithful 3D of the garment's shape, not a scan of its volume.
  */
-/**
- * The body a garment is worn on, as a depth at each point.
- *
- * Not a mannequin mesh — just the shape the cloth has to sit over. An
- * elliptical cross-section whose width and depth vary with height: narrow at
- * the hem, fullest through the chest, squaring off at the shoulders.
- *
- * The sleeves are deliberately left out of it. They hang off the arms, which
- * are much thinner than the torso, so running the chest profile across the
- * full width of a tee would blow the sleeves up into balloons. Beyond the
- * body's half-width the depth falls away and the existing outline inflation
- * takes over, which is about right for a sleeve.
- */
-function torsoProfile(worldWidth: number, height: number) {
-  const halfW = worldWidth / 2;
-  // A tee is far wider than the body in it: the rest is sleeve.
-  const bodyHalf = halfW * 0.56;
-
-  return (x: number, y: number) => {
-    // 0 at the hem, 1 at the shoulders.
-    const v = Math.min(1, Math.max(0, y / height + 0.5));
-
-    // Waist in, chest out, shoulders square.
-    const widthAt = bodyHalf * (0.84 + 0.16 * smoothStep(v * 1.15));
-    const t = Math.abs(x) / widthAt;
-    if (t >= 1) return 0;
-
-    // Deepest through the chest rather than at either end.
-    const fullness = 0.62 + 0.38 * Math.sin(Math.PI * Math.min(1, v * 0.95 + 0.05));
-    const maxDepth = widthAt * 0.58 * fullness;
-
-    // Elliptical section. The square root is what makes it read as a body
-    // rather than a slab with rounded corners.
-    return maxDepth * Math.sqrt(1 - t * t);
-  };
-}
-
-function smoothStep(t: number): number {
-  const u = Math.min(1, Math.max(0, t));
-  return u * u * (3 - 2 * u);
-}
 
 export function buildGarmentFromMask(
   mask: SilhouetteMask,

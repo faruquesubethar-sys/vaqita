@@ -71,6 +71,8 @@ function Garment({
   } | null>(null);
 
   const active = traced?.result ?? parametric;
+  // Trousers and track pants hang from the waist, not the shoulders.
+  const wornOnBody = !["TRACK_PANT", "TROUSER", "CAP"].includes(garmentType);
   const { geometry, print, height, bounds } = active;
   const photoFit = traced !== null;
 
@@ -262,10 +264,11 @@ function Garment({
 
   return (
     <>
-      {/* Only shown for a traced garment. On the parametric fallback the
-          silhouette is a generic shape that the body would not match, and a
-          neck poking through the wrong collar is worse than no neck. */}
-      {photoFit && <Mannequin height={height} />}
+      {/* Shown for tops, traced or not. Most stock is photographed without a
+          cut-out, so gating this on tracing meant the majority of garments
+          never got a body at all. Trousers are excluded upstream: a leg is
+          not a chest. */}
+      {wornOnBody && <Mannequin height={height} />}
 
       <mesh ref={mesh} geometry={geometry} castShadow>
       <shaderMaterial
@@ -341,6 +344,18 @@ export function GarmentViewer({
           seed={seed}
           resolution={resolution}
         />
+        {/*
+          The stage had no lights at all. It never needed them: the cloth is
+          drawn by a custom shader that does its own lighting. The moment a
+          standard material joined the scene — the form inside the garment —
+          it rendered as a black silhouette, correctly lit by nothing.
+
+          These do not touch the garment, which ignores scene lights entirely.
+        */}
+        <ambientLight intensity={0.55} color="#fff6ea" />
+        <directionalLight position={[-2, 3, 4]} intensity={1.1} color="#fff3e2" />
+        <directionalLight position={[3, 1, -2]} intensity={0.4} color="#cfe0f5" />
+
         <GroundShadow />
 
         <OrbitControls
