@@ -16,12 +16,19 @@ const field =
   "w-full border border-bone/15 bg-transparent px-3 py-2 text-sm text-alabaster outline-none transition-colors placeholder:text-smoke focus:border-brass";
 const label = "eyebrow mb-2 block";
 
+type Face = "front" | "back";
+
 /**
- * Drop a product photo in, and it becomes the 3D preview.
+ * Both sides of a garment, in one step.
  *
- * The analysis runs here, in the browser, before anything is sent: the image
- * is trimmed to the garment and its dominant colour is read out, so the admin
- * can see and correct the detected colourway rather than uploading blind.
+ * It used to take one photograph at a time with a radio button for which side
+ * it was, which meant uploading, waiting, choosing again and uploading again —
+ * and in practice the back never got done, so every garment's reverse stayed
+ * flat colour and turning it round showed nothing.
+ *
+ * The analysis runs here, in the browser, before anything is sent: each image
+ * is trimmed to the garment and the front's dominant colour is read out, so
+ * the colourway can be seen and corrected rather than uploaded blind.
  */
 export function ImageUpload({
   productId,
@@ -34,67 +41,88 @@ export function ImageUpload({
   textureUrl: string | null;
   textureBackUrl: string | null;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [extracted, setExtracted] = useState<ExtractedImage | null>(null);
+  const inputs = {
+    front: useRef<HTMLInputElement>(null),
+    back: useRef<HTMLInputElement>(null),
+  };
+
+  const [picked, setPicked] = useState<Record<Face, ExtractedImage | null>>({
+    front: null,
+    back: null,
+  });
   const [colorName, setColorName] = useState("");
   const [colorHex, setColorHex] = useState("");
-  const [face, setFace] = useState<"front" | "back" | "gallery">("front");
   const [repaint, setRepaint] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<Face | null>(null);
   const [result, setResult] = useState<AdminResult | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const onPick = async (file: File | undefined) => {
+  const onPick = async (face: Face, file: File | undefined) => {
     if (!file) return;
     setResult(null);
-    setBusy(true);
+    setBusy(face);
     try {
       const data = await extractFromFile(file);
-      setExtracted(data);
-      setColorName(data.colorName);
-      setColorHex(data.colorHex);
+      setPicked((p) => ({ ...p, [face]: data }));
+      // The colourway comes off the front only. The back of a tee is often
+      // mostly print, and reading the cloth colour from it gives the garment
+      // the ink's colour instead of its own.
+      if (face === "front") {
+        setColorName(data.colorName);
+        setColorHex(data.colorHex);
+      }
     } catch (err) {
       setResult({
         ok: false,
         error: err instanceof Error ? err.message : "Could not read that image.",
       });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
   const onSave = () => {
-    if (!extracted) return;
+    if (!picked.front && !picked.back) return;
+
     startTransition(async () => {
-      const fd = new FormData();
-      fd.set("productId", productId);
-      // The trimmed PNG is uploaded, not the original — it is already cropped
-      // to the garment and capped in size.
-      fd.set("file", new File([extracted.blob], "upload.png", { type: "image/png" }));
-      fd.set("alt", productName);
-      if (face === "front") fd.set("setAsTexture", "on");
-      if (face === "back") fd.set("setAsBackTexture", "on");
+      const saved: string[] = [];
 
-      const uploaded = await uploadProductImage(fd);
-      if (!uploaded.ok) return setResult(uploaded);
+      for (const face of ["front", "back"] as const) {
+        const image = picked[face];
+        if (!image) continue;
 
-      if (repaint) {
+        const fd = new FormData();
+        fd.set("productId", productId);
+        // The trimmed PNG is uploaded, not the original — already cropped to
+        // the garment and capped in size.
+        fd.set("file", new File([image.blob], `${face}.png`, { type: "image/png" }));
+        fd.set("alt", `${productName} — ${face}`);
+        fd.set(face === "front" ? "setAsTexture" : "setAsBackTexture", "on");
+
+        const uploaded = await uploadProductImage(fd);
+        // Stop on the first failure rather than pressing on: a product with a
+        // new front and a stale back is harder to notice than one that
+        // plainly did not save.
+        if (!uploaded.ok) return setResult(uploaded);
+        saved.push(face);
+      }
+
+      let message = `Saved the ${saved.join(" and ")} of the 3D model.`;
+
+      if (repaint && picked.front) {
         const cw = new FormData();
         cw.set("productId", productId);
         cw.set("colorName", colorName);
         cw.set("colorHex", colorHex);
         const painted = await applyColourway(cw);
-        setResult(
-          painted.ok
-            ? { ok: true, message: `${uploaded.message} ${painted.message}` }
-            : painted,
-        );
-      } else {
-        setResult(uploaded);
+        if (!painted.ok) return setResult(painted);
+        message = `${message} ${painted.message}`;
       }
 
-      setExtracted(null);
-      if (inputRef.current) inputRef.current.value = "";
+      setResult({ ok: true, message });
+      setPicked({ front: null, back: null });
+      if (inputs.front.current) inputs.front.current.value = "";
+      if (inputs.back.current) inputs.back.current.value = "";
     });
   };
 
@@ -106,11 +134,16 @@ export function ImageUpload({
     });
   };
 
+  const live: [Face, string | null][] = [
+    ["front", textureUrl],
+    ["back", textureBackUrl],
+  ];
+
   return (
     <section className="mt-8 border-t border-bone/10 pt-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <h4 className="eyebrow">Photo → 3D</h4>
-        {textureUrl && (
+        {(textureUrl || textureBackUrl) && (
           <button
             type="button"
             onClick={onClear}
@@ -122,93 +155,100 @@ export function ImageUpload({
         )}
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-[auto_1fr]">
-        {/* Current state */}
+      <div className="grid gap-6 lg:grid-cols-[auto_1fr]">
+        {/* What the model is wearing right now. */}
         <div className="flex gap-3">
-          {textureUrl ? (
-            <figure className="w-24">
-              <div className="relative aspect-[4/5] overflow-hidden border border-brass/40 bg-graphite">
-                <Image src={textureUrl} alt="" fill sizes="96px" className="object-cover" />
+          {live.map(([face, url]) => (
+            <figure key={face} className="w-20">
+              <div
+                className={cn(
+                  "relative aspect-[4/5] overflow-hidden border bg-graphite",
+                  url ? "border-brass/40" : "border-dashed border-bone/15",
+                )}
+              >
+                {url ? (
+                  <Image src={url} alt="" fill sizes="80px" className="object-cover" />
+                ) : (
+                  <span className="grid h-full place-items-center px-1 text-center text-[0.5rem] uppercase leading-tight tracking-[0.12em] text-smoke">
+                    Not set
+                  </span>
+                )}
               </div>
-              <figcaption className="mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-brass-lit">
-                Front in 3D
+              <figcaption
+                className={cn(
+                  "mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em]",
+                  url ? "text-brass-lit" : "text-smoke",
+                )}
+              >
+                {face} in 3D
               </figcaption>
             </figure>
-          ) : (
-            <div className="grid w-24 place-items-center border border-dashed border-bone/15 px-2 py-6 text-center text-[0.5625rem] uppercase leading-relaxed tracking-[0.15em] text-smoke">
-              Flat colour
-            </div>
-          )}
-
-          {textureBackUrl && (
-            <figure className="w-24">
-              <div className="relative aspect-[4/5] overflow-hidden border border-brass/40 bg-graphite">
-                <Image src={textureBackUrl} alt="" fill sizes="96px" className="object-cover" />
-              </div>
-              <figcaption className="mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-brass-lit">
-                Back in 3D
-              </figcaption>
-            </figure>
-          )}
-
-          {extracted && (
-            <figure className="w-24">
-              <div className="relative aspect-[4/5] overflow-hidden border border-bone/20 bg-graphite">
-                {/* Intentionally a plain img: this is a client-side data URL
-                    that next/image cannot optimise. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={extracted.previewUrl}
-                  alt="Trimmed preview"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <figcaption className="mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-stone">
-                Trimmed
-              </figcaption>
-            </figure>
-          )}
+          ))}
         </div>
 
         <div>
-          <label className={label} htmlFor={`file-${productId}`}>
-            Product photograph
-          </label>
-          <input
-            id={`file-${productId}`}
-            ref={inputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => onPick(e.target.files?.[0])}
-            className="w-full text-xs text-stone file:mr-3 file:border file:border-bone/20 file:bg-transparent file:px-4 file:py-2 file:text-[0.625rem] file:uppercase file:tracking-[0.15em] file:text-alabaster hover:file:border-brass"
-          />
-          <p className="mt-2 text-[0.6875rem] leading-relaxed text-smoke">
-            Shoot it flat and upload a PNG with the background already removed.
-            The 3D model is then cut from that outline, so it is this garment
-            rather than a generic one.
+          <div className="grid gap-5 sm:grid-cols-2">
+            {(["front", "back"] as const).map((face) => {
+              const image = picked[face];
+              return (
+                <div key={face}>
+                  <label className={label} htmlFor={`${face}-${productId}`}>
+                    {face === "front" ? "Front photograph" : "Back photograph"}
+                  </label>
+                  <input
+                    id={`${face}-${productId}`}
+                    ref={inputs[face]}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => onPick(face, e.target.files?.[0])}
+                    className="w-full text-xs text-stone file:mr-3 file:border file:border-bone/20 file:bg-transparent file:px-3 file:py-2 file:text-[0.625rem] file:uppercase file:tracking-[0.15em] file:text-alabaster hover:file:border-brass"
+                  />
+
+                  {busy === face && (
+                    <p className="mt-2 text-xs text-brass-lit">Reading…</p>
+                  )}
+
+                  {image && (
+                    <div className="mt-3 flex items-start gap-3">
+                      <div className="relative h-20 w-16 shrink-0 overflow-hidden border border-bone/20 bg-graphite">
+                        {/* Intentionally a plain img: a client-side data URL
+                            that next/image cannot optimise. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={image.previewUrl}
+                          alt={`${face} preview`}
+                          className="h-full w-full object-contain"
+                        />
+                      </div>
+                      {/* The one thing that decides whether the 3D matches,
+                          said per image, before anything is uploaded. */}
+                      <p
+                        className={cn(
+                          "border-l-2 pl-2 text-[0.625rem] leading-relaxed",
+                          image.hasCutout
+                            ? "border-brass/60 text-brass-lit"
+                            : "border-bone/25 text-stone",
+                        )}
+                      >
+                        {image.hasCutout
+                          ? "Cut-out detected — traced from this garment's own outline."
+                          : "No transparent background. Laid over a generic shape instead."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mt-3 text-[0.6875rem] leading-relaxed text-smoke">
+            Shoot both sides flat, the same way — same distance, same light,
+            same background — and upload PNGs with the background removed. The
+            two are mapped onto opposite faces of the same model, so a back
+            shot at a different angle will not line up when the garment turns.
           </p>
 
-          {busy && (
-            <p className="mt-3 text-xs text-brass-lit">Reading the image…</p>
-          )}
-
-          {/* The single thing that decides whether the 3D matches, said plainly
-              before anything is uploaded. */}
-          {extracted &&
-            (extracted.hasCutout ? (
-              <p className="mt-3 border-l-2 border-brass/60 pl-3 text-[0.6875rem] leading-relaxed text-brass-lit">
-                Cut-out detected — the 3D model will be traced from this
-                garment&rsquo;s own outline.
-              </p>
-            ) : (
-              <p className="mt-3 border-l-2 border-bone/25 pl-3 text-[0.6875rem] leading-relaxed text-stone">
-                No transparent background, so there is no outline to trace. The
-                photo will be laid over a generic shape instead. For an exact
-                model, remove the background first and re-upload as a PNG.
-              </p>
-            ))}
-
-          {extracted && (
+          {(picked.front || picked.back) && (
             <div className="mt-5 space-y-4">
               <div className="grid grid-cols-[1fr_auto_auto] items-end gap-3">
                 <div>
@@ -241,44 +281,15 @@ export function ImageUpload({
                 />
               </div>
 
-              <div className="flex flex-wrap gap-5">
-                {/* Front and back are separate surfaces on the model. Without
-                    a back photo the reverse is flat cloth colour, which makes
-                    turning the garment round pointless. */}
-                <fieldset className="flex flex-wrap items-center gap-4">
-                  <legend className="sr-only">Where this photo goes</legend>
-                  {(
-                    [
-                      ["front", "Front of the 3D model"],
-                      ["back", "Back of the 3D model"],
-                      ["gallery", "Gallery only"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <label
-                      key={value}
-                      className="flex items-center gap-2 text-xs text-stone"
-                    >
-                      <input
-                        type="radio"
-                        name={`face-${productId}`}
-                        checked={face === value}
-                        onChange={() => setFace(value)}
-                        className="h-3.5 w-3.5 accent-[#b08d57]"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </fieldset>
-                <label className="flex items-center gap-2.5 text-xs text-stone">
-                  <input
-                    type="checkbox"
-                    checked={repaint}
-                    onChange={(e) => setRepaint(e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[#b08d57]"
-                  />
-                  Repaint the colourway
-                </label>
-              </div>
+              <label className="flex items-center gap-2.5 text-xs text-stone">
+                <input
+                  type="checkbox"
+                  checked={repaint}
+                  onChange={(e) => setRepaint(e.target.checked)}
+                  className="h-3.5 w-3.5 accent-[#b08d57]"
+                />
+                Repaint the colourway
+              </label>
 
               <button
                 type="button"
@@ -286,7 +297,11 @@ export function ImageUpload({
                 disabled={isPending}
                 className="border border-brass/60 px-5 py-2 text-[0.625rem] uppercase tracking-[0.18em] text-brass-lit transition-colors hover:bg-brass hover:text-ink disabled:opacity-50"
               >
-                {isPending ? "Saving…" : "Save image"}
+                {isPending
+                  ? "Saving…"
+                  : picked.front && picked.back
+                    ? "Save both sides"
+                    : `Save the ${picked.front ? "front" : "back"}`}
               </button>
             </div>
           )}
