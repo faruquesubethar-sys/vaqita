@@ -78,11 +78,46 @@ float vnoise(vec2 p) {
 }
 
 /** Interlocking knit loops. Two offset sine grids read as jersey, not canvas. */
+float hash11(float n) {
+  return fract(sin(n * 127.1) * 43758.5453);
+}
+
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+/**
+ * Cotton jersey, in three layers.
+ *
+ * Two crossed sines alone gave a perfect grid, which reads as graph paper
+ * rather than cloth — real yarn is never that even, and the eye picks up the
+ * regularity immediately even when it cannot say why.
+ *
+ *   1. The warp and weft themselves.
+ *   2. Slub: per-thread thickness variation. A cotton yarn is thicker in some
+ *      places than others, and that unevenness is most of what makes a cheap
+ *      tee look like a tee.
+ *   3. Fibre grain, far finer than the weave, for the dusty surface a knit
+ *      has when light grazes it.
+ */
 float weave(vec2 uv) {
   vec2 p = uv * uWeaveScale;
-  float warp = sin(p.x * 6.2831853);
-  float weft = sin(p.y * 6.2831853 + warp * 0.6);
-  return (warp * 0.5 + weft * 0.5) * 0.5 + 0.5;
+
+  // Each thread gets its own thickness, constant along its length.
+  float warpSlub = 0.72 + 0.56 * hash11(floor(p.x));
+  float weftSlub = 0.72 + 0.56 * hash11(floor(p.y) + 37.0);
+
+  float warp = sin(p.x * 6.2831853) * warpSlub;
+  // Offset by the warp so the weft rides over and under it rather than
+  // crossing it flat.
+  float weft = sin(p.y * 6.2831853 + warp * 0.6) * weftSlub;
+
+  float cloth = (warp * 0.5 + weft * 0.5) * 0.5 + 0.5;
+
+  // Fibre grain, at roughly four times the weave frequency.
+  float fibre = hash21(floor(p * 4.0)) - 0.5;
+
+  return clamp(cloth + fibre * 0.085, 0.0, 1.0);
 }
 
 float cross2(vec2 a, vec2 b) { return a.x * b.y - a.y * b.x; }
@@ -201,7 +236,9 @@ void main() {
   vec2 e = vec2(1.0 / max(uWeaveScale, 1.0) * 0.35, 0.0);
   float wx = weave(vUv + e.xy) - weave(vUv - e.xy);
   float wy = weave(vUv + e.yx) - weave(vUv - e.yx);
-  N = normalize(N + vec3(wx, wy, 0.0) * 0.28);
+  // Raised from 0.28. The weave is what makes a flat photograph read as
+  // cloth rather than as a printed sticker, and it was too faint to do that.
+  N = normalize(N + vec3(wx, wy, 0.0) * 0.45);
 
   // Wrap diffuse — the single most important term for cloth.
   float ndl = dot(N, L);
@@ -294,8 +331,15 @@ void main() {
     photoMix = 0.0;
   }
 
-  // The weave adds realistic cloth texture while preserving print crispness
-  base *= mix(0.88 + w * 0.24, 1.0, photoMix * 0.65);
+  // The weave, kept largely intact under a photograph.
+  //
+  // It used to be suppressed by 65% wherever a photo showed — which is to say
+  // almost everywhere on a real product, since a photographed garment is
+  // covered edge to edge. The texture was only ever visible on the flat
+  // colourways nobody sees. Damping it at all is still right, because the
+  // photograph already contains the cloth's own weave and doubling them up
+  // moires; 30% is enough to stop that.
+  base *= mix(0.86 + w * 0.28, 1.0, photoMix * 0.3);
 
   // Lighting strength is dialled down where a photograph supplies the shading.
   float lit = mix(1.0, 0.42, photoMix);
