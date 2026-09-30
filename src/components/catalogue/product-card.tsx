@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CursorLight } from "@/components/motion/cursor-light";
+
 import { TryIt } from "@/components/tryon/try-it";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -76,7 +78,7 @@ export function ProductCard({
     <article className={cn("group/card", className)}>
       {/* The link and the try-on button are siblings. Nesting a button inside
           an anchor is invalid, and it breaks keyboard activation on both. */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-graphite">
+      <CursorLight className="aspect-[4/5] overflow-hidden bg-graphite">
         <Link
           href={`/products/${product.slug}`}
           className="absolute inset-0"
@@ -113,7 +115,7 @@ export function ProductCard({
 
         {onSale && (
           <span className="pointer-events-none absolute left-4 top-4 bg-brass px-2.5 py-1 text-[0.5625rem] uppercase tracking-[0.2em] text-ink">
-            Graded price
+            Reduced
           </span>
         )}
         {!inStock && (
@@ -139,7 +141,7 @@ export function ProductCard({
             />
           </div>
         )}
-      </div>
+      </CursorLight>
 
       <div className="flex items-start justify-between gap-4 pt-5">
         <div className="min-w-0">

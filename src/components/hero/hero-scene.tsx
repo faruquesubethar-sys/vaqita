@@ -395,7 +395,19 @@ function StudioEnvironment() {
 /**
  * Direct studio lighting to ensure the swan is always brilliantly lit and visible.
  */
-function MarkLights() {
+function MarkLights({ rig }: { rig: Rig }) {
+  const travelling = useRef<THREE.PointLight>(null);
+
+  useFrame(() => {
+    if (!travelling.current) return;
+    // The close warm source tracks the cursor, so the highlight travels
+    // across the facets as the visitor moves rather than sitting in one
+    // place. On metal that is most of what separates a rendered object from
+    // a photographed one: a still highlight reads as painted on.
+    travelling.current.position.x = 0.5 + rig.pointer.x * 2.6;
+    travelling.current.position.y = 0.5 + rig.pointer.y * 1.9;
+  });
+
   return (
     <>
       {/*
@@ -413,7 +425,13 @@ function MarkLights() {
       <directionalLight position={[3, 1, 2]} intensity={0.55} color="#cfe0f5" />
       {/* Close warm source: this is what travels across the facets as it
           turns, and does most of the work of making it look like metal. */}
-      <pointLight position={[0.5, 0.5, 3]} intensity={0.6} color="#ffe6a8" distance={12} />
+      <pointLight
+        ref={travelling}
+        position={[0.5, 0.5, 3]}
+        intensity={0.85}
+        color="#ffe6a8"
+        distance={12}
+      />
     </>
   );
 }
@@ -651,7 +669,7 @@ function Scene({ quality }: { quality: Quality }) {
 
       <CameraRig rig={rig} />
       <StudioEnvironment />
-      <MarkLights />
+      <MarkLights rig={rig} />
       <Backdrop rig={rig} quality={quality} />
       <Shafts count={quality === "low" ? 2 : 3} />
       <HouseMark rig={rig} quality={quality} />

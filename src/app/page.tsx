@@ -8,6 +8,7 @@ import {
 import { Hero } from "@/components/hero/hero";
 import { Marquee } from "@/components/sections/marquee";
 import { MaterialStudy } from "@/components/sections/material-study";
+import { WaxSeal } from "@/components/brand/wax-seal";
 import { Reveal } from "@/components/motion/reveal";
 import { SplitText } from "@/components/motion/split-text";
 import { db } from "@/lib/db";
@@ -152,6 +153,11 @@ export default async function HomePage() {
         </div>
 
         <div className="shell max-w-3xl">
+          {/* Sits with the buying section and nowhere else. A seal on every
+              section is decoration; a seal on the paragraph about stock that
+              comes in once and is not reordered is the point. */}
+          <WaxSeal className="mb-10" />
+
           <Reveal>
             <p className="eyebrow">How we buy</p>
             <h2 className="display mt-5 text-[clamp(2.25rem,5.5vw,4.5rem)] leading-[1.02] text-alabaster">
