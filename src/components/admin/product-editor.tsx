@@ -40,6 +40,7 @@ export type AdminProduct = {
   garmentType: string;
   graphicStyle: string;
   textureUrl: string | null;
+  textureBackUrl: string | null;
   collection: { id: string; name: string } | null;
   images: { url: string }[];
   variants: AdminVariant[];
@@ -377,6 +378,7 @@ function ProductRow({
             productId={product.id}
             productName={product.name}
             textureUrl={product.textureUrl}
+            textureBackUrl={product.textureBackUrl}
           />
 
           {/* Stock */}

@@ -95,6 +95,10 @@ model Product {
   // projects this image onto the front of the garment instead of rendering a
   // flat colour, so an uploaded product shot becomes the 3D model's surface.
   textureUrl   String?
+  // The reverse of the garment. Without it the back of the 3D model is flat
+  // colour, which makes turning the piece round pointless — and most of what
+  // is worth seeing on a resold tee is often on the back.
+  textureBackUrl String?
 
   priceCents   Int
   compareAtCents Int?

@@ -44,6 +44,8 @@ uniform float uRoughness;
 
 // Photograph projected onto the garment's front face.
 uniform sampler2D uTexture;
+uniform sampler2D uTextureBack;
+uniform int       uHasBack;
 uniform int       uHasTexture;
 uniform vec4      uTextureRect; // x, y, w, h of the garment inside UV space
 // 1 when the mesh was traced from this very photograph, so UV is already the
@@ -254,6 +256,31 @@ void main() {
       vec3 photoColor = mix(sampled.rgb, uColor, isBg);
       base = mix(uColor, photoColor, 1.0 - isBg);
       photoMix = (1.0 - isBg) * sampled.a;
+    }
+  } else if (uHasBack == 1 && vSide <= 0.0) {
+    // The reverse of the garment, from its own photograph.
+    //
+    // Mirrored in u. The back sheet's vertices carry the same UVs as the
+    // front ones they sit behind, so viewed from behind the image would come
+    // out reversed — the neck label on the wrong shoulder. Flipping u puts
+    // the back photo the way round you would actually see it.
+    vec2 bUv = uPhotoFit == 1
+      ? vec2(1.0 - vUv.x, vUv.y)
+      : vec2(1.0 - (vUv.x - uTextureRect.x) / max(uTextureRect.z, 1e-4),
+             (vUv.y - uTextureRect.y) / max(uTextureRect.w, 1e-4));
+
+    if (bUv.x >= 0.0 && bUv.x <= 1.0 && bUv.y >= 0.0 && bUv.y <= 1.0) {
+      vec4 sampled = texture2D(uTextureBack, bUv);
+      float isTransparent = 1.0 - smoothstep(0.05, 0.25, sampled.a);
+      float isBg = isTransparent;
+      if (uPhotoFit != 1) {
+        float brightness = max(sampled.r, max(sampled.g, sampled.b));
+        isBg = clamp(isTransparent + (1.0 - smoothstep(0.015, 0.045, brightness)), 0.0, 1.0);
+      }
+      base = mix(sampled.rgb, uBackColor, isBg);
+      photoMix = (1.0 - isBg) * sampled.a;
+    } else {
+      base = uBackColor;
     }
   } else if (uHasTexture == 1 && vSide <= 0.0) {
     // Back of the shirt: the photograph only shows one side, so this is the

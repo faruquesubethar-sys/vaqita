@@ -58,7 +58,11 @@ export function Mannequin({
     // Must stay inside the torso the cloth is draped over, which is 56% of
     // the garment's half-width — the rest is sleeve. Wider than that and the
     // form shows past the shoulders as a dark band, which is what it did.
-    g.scale(1.0, 0.8, 0.6);
+    // Shallow in z as well as narrow. The garment's back sheet sits only
+    // about a third of a unit behind centre, so a deeper form pushes
+    // straight through it and appears as a dark blob when the piece is
+    // turned round.
+    g.scale(1.0, 0.8, 0.34);
     return g;
   }, [height]);
 
@@ -67,7 +71,7 @@ export function Mannequin({
       <mesh geometry={neck} position={[0, 0, -height * 0.01]}>
         <meshStandardMaterial color="#6f655a" roughness={0.95} metalness={0.02} />
       </mesh>
-      <mesh geometry={chest} position={[0, height * 0.24, -height * 0.03]}>
+      <mesh geometry={chest} position={[0, height * 0.24, height * 0.01]}>
         <meshStandardMaterial color="#5c534a" roughness={0.96} metalness={0.02} />
       </mesh>
     </group>

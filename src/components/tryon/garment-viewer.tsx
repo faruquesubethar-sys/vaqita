@@ -26,6 +26,8 @@ export type GarmentViewerProps = {
   printStyle?: string;
   /** A product photograph to project onto the garment's front face. */
   textureUrl?: string | null;
+  /** The same for the reverse. Without it the back is flat cloth colour. */
+  textureBackUrl?: string | null;
   /** Deterministic per product so the print crackle does not change on rerender. */
   seed?: number;
   /** Slow idle turn. Off while the visitor is dragging. */
@@ -33,16 +35,71 @@ export type GarmentViewerProps = {
   className?: string;
 };
 
+/**
+ * Loads one projected photograph.
+ *
+ * Held in state rather than written straight into the material's uniforms.
+ * An earlier version wrote to a ref inside an effect and bailed when the ref
+ * was not yet attached — and since the URL never changes afterwards, that
+ * effect never ran again, so the photograph was silently never fetched and
+ * every garment rendered as flat colour. State has no such ordering problem.
+ */
+function useProjectedTexture(url?: string | null) {
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
+
+  useEffect(() => {
+    if (!url) {
+      setTexture(null);
+      return;
+    }
+
+    let cancelled = false;
+    new THREE.TextureLoader().load(
+      url,
+      (loaded) => {
+        if (cancelled) {
+          loaded.dispose();
+          return;
+        }
+        loaded.colorSpace = THREE.SRGBColorSpace;
+        loaded.anisotropy = 4;
+        // The photo covers the garment exactly once; repeating would tile a
+        // sleeve across the chest at the edges.
+        loaded.wrapS = THREE.ClampToEdgeWrapping;
+        loaded.wrapT = THREE.ClampToEdgeWrapping;
+        setTexture(loaded);
+      },
+      undefined,
+      // A missing or unreadable file falls back to the flat colourway rather
+      // than rendering an untextured black garment.
+      () => {
+        if (!cancelled) setTexture(null);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  // An undisposed texture holds its GPU memory for the life of the page.
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  return texture;
+}
+
 function Garment({
   garmentType,
   colorHex,
   printStyle = "NONE",
   textureUrl,
+  textureBackUrl,
   seed = 0,
   resolution,
 }: Required<Pick<GarmentViewerProps, "garmentType" | "colorHex">> & {
   printStyle?: string;
   textureUrl?: string | null;
+  textureBackUrl?: string | null;
   seed?: number;
   resolution: number;
 }) {
@@ -117,6 +174,8 @@ function Garment({
       uTextureRect: {
         value: new THREE.Vector4(bounds.x, bounds.y, bounds.w, bounds.h),
       },
+      uTextureBack: { value: null as THREE.Texture | null },
+      uHasBack: { value: 0 },
       uPhotoFit: { value: 0 },
       uBackColor: { value: new THREE.Color(colorHex) },
     }),
@@ -146,44 +205,8 @@ function Garment({
    * again, so the photograph was silently never fetched and every garment
    * rendered as flat colour. State has no such ordering dependency.
    */
-  const [texture, setTexture] = useState<THREE.Texture | null>(null);
-
-  useEffect(() => {
-    if (!textureUrl) {
-      setTexture(null);
-      return;
-    }
-
-    let cancelled = false;
-    const loader = new THREE.TextureLoader();
-
-    loader.load(
-      textureUrl,
-      (loaded) => {
-        if (cancelled) {
-          loaded.dispose();
-          return;
-        }
-        loaded.colorSpace = THREE.SRGBColorSpace;
-        loaded.anisotropy = 4;
-        // The photo covers the garment exactly once; repeating would tile a
-        // sleeve across the chest at the edges.
-        loaded.wrapS = THREE.ClampToEdgeWrapping;
-        loaded.wrapT = THREE.ClampToEdgeWrapping;
-        setTexture(loaded);
-      },
-      undefined,
-      () => {
-        // A missing or unreadable file falls back to the flat colourway rather
-        // than rendering an untextured black garment.
-        if (!cancelled) setTexture(null);
-      },
-    );
-
-    return () => {
-      cancelled = true;
-    };
-  }, [textureUrl]);
+  const texture = useProjectedTexture(textureUrl);
+  const textureBack = useProjectedTexture(textureBackUrl);
 
   // Dispose the previous texture whenever it is replaced or the viewer closes;
   // an undisposed texture holds its GPU memory for the life of the page.
@@ -248,6 +271,10 @@ function Garment({
     if (m.uniforms.uTexture.value !== texture) {
       m.uniforms.uTexture.value = texture;
       m.uniforms.uHasTexture.value = texture ? 1 : 0;
+    }
+    if (m.uniforms.uTextureBack.value !== textureBack) {
+      m.uniforms.uTextureBack.value = textureBack;
+      m.uniforms.uHasBack.value = textureBack ? 1 : 0;
     }
     if (m.uniforms.uTextureRect) {
       m.uniforms.uTextureRect.value.set(bounds.x, bounds.y, bounds.w, bounds.h);
@@ -315,6 +342,7 @@ export function GarmentViewer({
   colorHex,
   printStyle,
   textureUrl,
+  textureBackUrl,
   seed = 0,
   autoRotate = true,
   className,
@@ -341,6 +369,7 @@ export function GarmentViewer({
           colorHex={colorHex}
           printStyle={printStyle}
           textureUrl={textureUrl}
+          textureBackUrl={textureBackUrl}
           seed={seed}
           resolution={resolution}
         />

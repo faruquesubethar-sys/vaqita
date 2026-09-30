@@ -41,6 +41,7 @@ export type TryItProps = {
   printStyle: string;
   /** Optional product photograph projected onto the 3D garment. */
   textureUrl?: string | null;
+  textureBackUrl?: string | null;
   basePriceCents: number;
   variants: TryItVariant[];
   /** Stable per product, so the print texture does not reshuffle. */
@@ -64,6 +65,7 @@ export function TryIt({
   garmentType,
   printStyle,
   textureUrl,
+  textureBackUrl,
   basePriceCents,
   variants,
   seed,
@@ -96,6 +98,7 @@ export function TryIt({
             garmentType={garmentType}
             printStyle={printStyle}
             textureUrl={textureUrl}
+            textureBackUrl={textureBackUrl}
             basePriceCents={basePriceCents}
             variants={variants}
             seed={seed}
@@ -142,6 +145,7 @@ function TryItOverlay({
   garmentType,
   printStyle,
   textureUrl,
+  textureBackUrl,
   basePriceCents,
   variants,
   seed,
@@ -246,6 +250,7 @@ function TryItOverlay({
             colorHex={activeHex}
             printStyle={printStyle}
             textureUrl={textureUrl}
+            textureBackUrl={textureBackUrl}
             seed={seed}
             className="absolute inset-0"
           />

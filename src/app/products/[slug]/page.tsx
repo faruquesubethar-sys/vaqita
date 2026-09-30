@@ -160,6 +160,7 @@ export default async function ProductPage({
             garmentType={product.garmentType}
             printStyle={product.graphicStyle}
             textureUrl={product.textureUrl}
+            textureBackUrl={product.textureBackUrl}
             basePriceCents={product.priceCents}
             seed={seedFromSlug(product.slug)}
             variants={product.variants.map((v) => ({

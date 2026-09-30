@@ -27,16 +27,18 @@ export function ImageUpload({
   productId,
   productName,
   textureUrl,
+  textureBackUrl,
 }: {
   productId: string;
   productName: string;
   textureUrl: string | null;
+  textureBackUrl: string | null;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [extracted, setExtracted] = useState<ExtractedImage | null>(null);
   const [colorName, setColorName] = useState("");
   const [colorHex, setColorHex] = useState("");
-  const [useAsTexture, setUseAsTexture] = useState(true);
+  const [face, setFace] = useState<"front" | "back" | "gallery">("front");
   const [repaint, setRepaint] = useState(true);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<AdminResult | null>(null);
@@ -70,7 +72,8 @@ export function ImageUpload({
       // to the garment and capped in size.
       fd.set("file", new File([extracted.blob], "upload.png", { type: "image/png" }));
       fd.set("alt", productName);
-      if (useAsTexture) fd.set("setAsTexture", "on");
+      if (face === "front") fd.set("setAsTexture", "on");
+      if (face === "back") fd.set("setAsBackTexture", "on");
 
       const uploaded = await uploadProductImage(fd);
       if (!uploaded.ok) return setResult(uploaded);
@@ -128,13 +131,24 @@ export function ImageUpload({
                 <Image src={textureUrl} alt="" fill sizes="96px" className="object-cover" />
               </div>
               <figcaption className="mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-brass-lit">
-                Live in 3D
+                Front in 3D
               </figcaption>
             </figure>
           ) : (
             <div className="grid w-24 place-items-center border border-dashed border-bone/15 px-2 py-6 text-center text-[0.5625rem] uppercase leading-relaxed tracking-[0.15em] text-smoke">
               Flat colour
             </div>
+          )}
+
+          {textureBackUrl && (
+            <figure className="w-24">
+              <div className="relative aspect-[4/5] overflow-hidden border border-brass/40 bg-graphite">
+                <Image src={textureBackUrl} alt="" fill sizes="96px" className="object-cover" />
+              </div>
+              <figcaption className="mt-1.5 text-[0.5625rem] uppercase tracking-[0.15em] text-brass-lit">
+                Back in 3D
+              </figcaption>
+            </figure>
           )}
 
           {extracted && (
@@ -228,15 +242,33 @@ export function ImageUpload({
               </div>
 
               <div className="flex flex-wrap gap-5">
-                <label className="flex items-center gap-2.5 text-xs text-stone">
-                  <input
-                    type="checkbox"
-                    checked={useAsTexture}
-                    onChange={(e) => setUseAsTexture(e.target.checked)}
-                    className="h-3.5 w-3.5 accent-[#b08d57]"
-                  />
-                  Use as the 3D surface
-                </label>
+                {/* Front and back are separate surfaces on the model. Without
+                    a back photo the reverse is flat cloth colour, which makes
+                    turning the garment round pointless. */}
+                <fieldset className="flex flex-wrap items-center gap-4">
+                  <legend className="sr-only">Where this photo goes</legend>
+                  {(
+                    [
+                      ["front", "Front of the 3D model"],
+                      ["back", "Back of the 3D model"],
+                      ["gallery", "Gallery only"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      key={value}
+                      className="flex items-center gap-2 text-xs text-stone"
+                    >
+                      <input
+                        type="radio"
+                        name={`face-${productId}`}
+                        checked={face === value}
+                        onChange={() => setFace(value)}
+                        className="h-3.5 w-3.5 accent-[#b08d57]"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
                 <label className="flex items-center gap-2.5 text-xs text-stone">
                   <input
                     type="checkbox"

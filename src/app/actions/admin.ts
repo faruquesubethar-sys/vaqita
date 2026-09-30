@@ -394,6 +394,7 @@ export async function uploadProductImage(formData: FormData): Promise<AdminResul
   const productId = formData.get("productId");
   const file = formData.get("file");
   const setAsTexture = formData.get("setAsTexture") === "on";
+  const setAsBackTexture = formData.get("setAsBackTexture") === "on";
   const alt = (formData.get("alt") as string | null)?.trim() || null;
 
   if (typeof productId !== "string" || !productId) {
@@ -433,10 +434,10 @@ export async function uploadProductImage(formData: FormData): Promise<AdminResul
     },
   });
 
-  if (setAsTexture) {
+  if (setAsTexture || setAsBackTexture) {
     await db.product.update({
       where: { id: product.id },
-      data: { textureUrl: url },
+      data: setAsBackTexture ? { textureBackUrl: url } : { textureUrl: url },
     });
   }
 
@@ -446,9 +447,11 @@ export async function uploadProductImage(formData: FormData): Promise<AdminResul
 
   return {
     ok: true,
-    message: setAsTexture
-      ? "Image saved and wired into the 3D preview."
-      : "Image saved to the gallery.",
+    message: setAsBackTexture
+      ? "Image saved as the back of the 3D model."
+      : setAsTexture
+        ? "Image saved and wired into the 3D preview."
+        : "Image saved to the gallery.",
   };
 }
 
@@ -513,7 +516,10 @@ export async function clearTexture(formData: FormData): Promise<AdminResult> {
     return { ok: false, error: "Missing product." };
   }
 
-  await db.product.update({ where: { id: productId }, data: { textureUrl: null } });
+  await db.product.update({
+    where: { id: productId },
+    data: { textureUrl: null, textureBackUrl: null },
+  });
   revalidatePath("/admin/products");
   return { ok: true, message: "3D preview returned to a flat colourway." };
 }
