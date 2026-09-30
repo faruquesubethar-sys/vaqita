@@ -1,0 +1,36 @@
+node_modules
+.next
+out
+build
+.DS_Store
+*.pem
+
+# env
+.env
+.env*.local
+
+# prisma
+/generated/prisma
+prisma/dev.db
+prisma/dev.db-journal
+*.db
+*.db-journal
+
+# product photographs
+# Uploads go to Cloudinary in production; this folder is only what a local
+# dev run happens to have written. Committing it would push stock photography
+# into the repository and serve stale copies from the deployed site.
+/public/uploads
+
+# misc
+.vercel
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# AI tooling scaffolding
+# Three identical copies of vendored skill documentation, installed by the
+# editor tooling rather than written here. `skills-lock.json` is kept so they
+# can be restored; the expanded copies are noise in a deploy.
+.agents/
+.windsurf/
+.claude/skills/

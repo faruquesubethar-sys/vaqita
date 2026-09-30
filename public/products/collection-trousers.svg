@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1750" width="1400" height="1750">
+  <defs>
+    <pattern id="j" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
+      <rect width="8" height="8" fill="#4a4438"/>
+      <path d="M0 4 H8" stroke="#595243" stroke-width="1.2" opacity=".4"/>
+      <path d="M4 0 V8" stroke="#2b2720" stroke-width="1.2" opacity=".3"/>
+    </pattern>
+    <radialGradient id="v" cx="50%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity=".68"/>
+    </radialGradient>
+    <filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" seed="52"/><feColorMatrix type="saturate" values="0"/></filter>
+    <filter id="s"><feGaussianBlur stdDeviation="30"/></filter>
+  </defs>
+  <rect width="1400" height="1750" fill="url(#j)"/>
+  <g opacity=".5" filter="url(#s)">
+    <path d="M224 0 Q 560 875, 336 1750" fill="none" stroke="#595243" stroke-width="90" opacity=".28"/>
+    <path d="M1036 0 Q 784.0000000000001 910, 1176 1750" fill="none" stroke="#2b2720" stroke-width="130" opacity=".45"/>
+  </g>
+  <rect width="1400" height="1750" filter="url(#g)" opacity=".05" style="mix-blend-mode:overlay"/>
+  <rect width="1400" height="1750" fill="url(#v)"/>
+</svg>

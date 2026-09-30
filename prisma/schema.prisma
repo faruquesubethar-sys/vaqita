@@ -1,0 +1,238 @@
+// VAQITA — data model
+//
+// Postgres, in development as well as production.
+//
+// It used to be SQLite, which is a file on disk. No host inside this project's
+// budget gives you a disk that survives a redeploy, so the file — every order,
+// every product — would have been wiped on each deploy. Running the same engine
+// locally as in production also means a query that works here works there.
+//
+// Money is stored as integer minor units (paise) and "enums" are strings
+// guarded in application code.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------- accounts
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         String    @default("CUSTOMER") // CUSTOMER | ADMIN
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  addresses Address[]
+  orders    Order[]
+  carts     Cart[]
+
+  @@index([email])
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  label      String? // "Home", "Studio"
+  firstName  String
+  lastName   String
+  line1      String
+  line2      String?
+  city       String
+  region     String
+  postalCode String
+  country    String  @default("IN")
+  phone      String?
+  isDefault  Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------- catalogue
+
+model Collection {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  tagline     String?
+  description String?
+  heroImage   String?
+  position    Int     @default(0)
+
+  products Product[]
+
+  @@index([slug])
+}
+
+model Product {
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  name         String
+  subtitle     String? // "Unstructured shoulder, half-canvas"
+  description  String
+  story        String? // long-form editorial copy for the PDP
+  composition  String? // "92% wool, 8% cashmere"
+  care         String?
+  madeIn       String?
+  fit          String? // "Boxy" | "Relaxed" | "Regular" | "Cropped"
+
+  // Drives the 3D try-on: which garment mesh to build, and what is printed on
+  // it. See src/components/tryon/garment-geometry.ts for the shapes.
+  garmentType  String  @default("TEE") // TEE | LONG_SLEEVE | SHIRT | TANK | HOODIE
+  graphicText  String? // print shown across the chest in the 3D view
+  graphicStyle String  @default("NONE") // NONE | BLOCK | ARCH | STAMP | SWAN
+
+  // A photograph that drives the 3D preview. When set, the fitting room
+  // projects this image onto the front of the garment instead of rendering a
+  // flat colour, so an uploaded product shot becomes the 3D model's surface.
+  textureUrl   String?
+
+  priceCents   Int
+  compareAtCents Int?
+  currency     String  @default("INR")
+  status       String  @default("ACTIVE") // ACTIVE | DRAFT | ARCHIVED
+  featured     Boolean @default(false)
+  position     Int     @default(0)
+  collectionId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  collection Collection?    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  images     ProductImage[]
+  variants   Variant[]
+
+  @@index([slug])
+  @@index([collectionId])
+  @@index([status])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  position  Int     @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Variant {
+  id         String  @id @default(cuid())
+  productId  String
+  sku        String  @unique
+  size       String // "48", "M", "32"
+  color      String
+  colorHex   String  @default("#1A1A1A")
+  priceCents Int? // overrides Product.priceCents when set
+  stock      Int     @default(0)
+  position   Int     @default(0)
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems CartItem[]
+
+  @@unique([productId, size, color])
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------- cart
+
+model Cart {
+  id        String   @id @default(cuid())
+  token     String   @unique // anonymous cart cookie
+  userId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items CartItem[]
+
+  @@index([token])
+  @@index([userId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+}
+
+// ---------------------------------------------------------------- orders
+
+model Order {
+  id     String @id @default(cuid())
+  number String @unique // VQ-2026-0001
+  userId String?
+  email  String
+
+  status        String @default("PENDING") // PENDING | PAID | FULFILLED | CANCELLED | REFUNDED
+  paymentStatus String @default("UNPAID")  // UNPAID | PAID | REFUNDED
+
+  subtotalCents Int
+  shippingCents Int @default(0)
+  taxCents      Int @default(0)
+  totalCents    Int
+  currency      String @default("INR")
+
+  // Shipping snapshot — orders must survive address edits and deletions.
+  shipFirstName  String
+  shipLastName   String
+  shipLine1      String
+  shipLine2      String?
+  shipCity       String
+  shipRegion     String
+  shipPostalCode String
+  shipCountry    String
+  shipPhone      String?
+
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+
+  // Snapshot of what was bought — never joined back to live catalogue data,
+  // so price and naming changes cannot rewrite history.
+  variantId      String?
+  productSlug    String
+  productName    String
+  size           String
+  color          String
+  imageUrl       String?
+  unitPriceCents Int
+  quantity       Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}

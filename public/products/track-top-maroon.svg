@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250" width="1000" height="1250">
+  <defs>
+    <linearGradient id="cloth" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0%" stop-color="#652e37"/>
+      <stop offset="46%" stop-color="#57282f"/>
+      <stop offset="100%" stop-color="#3d1c21"/>
+    </linearGradient>
+
+    <pattern id="jersey" width="7" height="7" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="#57282f"/>
+      <path d="M0 3.5 H7" stroke="#652e37" stroke-width="1" opacity=".30"/>
+      <path d="M3.5 0 V7" stroke="#2a1317" stroke-width="1" opacity=".22"/>
+    </pattern>
+
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="68"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+
+    <radialGradient id="ground" cx="50%" cy="46%" r="72%">
+      <stop offset="0%" stop-color="#1b1c20"/>
+      <stop offset="100%" stop-color="#0b0b0c"/>
+    </radialGradient>
+
+    <clipPath id="body"><path d="M316 262 Q500 228 684 262 L684 318 L936 400 L866 890 L768 866
+        L780 1056 Q500 1090 220 1056 L232 866 L134 890 L64 400 L316 318 Z"/></clipPath>
+  </defs>
+
+  <rect width="1000" height="1250" fill="url(#ground)"/>
+
+  <!-- Cast shadow, offset down-right from the garment -->
+  <g opacity="0.55" filter="url(#soft)" transform="translate(26 30)">
+    <path d="M316 262 Q500 228 684 262 L684 318 L936 400 L866 890 L768 866
+        L780 1056 Q500 1090 220 1056 L232 866 L134 890 L64 400 L316 318 Z" fill="#000"/>
+  </g>
+
+  <!-- Garment -->
+  <path d="M316 262 Q500 228 684 262 L684 318 L936 400 L866 890 L768 866
+        L780 1056 Q500 1090 220 1056 L232 866 L134 890 L64 400 L316 318 Z" fill="url(#cloth)"/>
+  <g clip-path="url(#body)">
+    <rect width="1000" height="1250" fill="url(#jersey)" opacity="0.5"/>
+
+    <!-- Folds: soft strokes that follow how a flat-laid garment creases -->
+    <g filter="url(#soft)" opacity="0.5">
+      <path d="M356 340 Q392 640 336 1020" stroke="#2a1317" stroke-width="44" fill="none"/>
+      <path d="M660 350 Q618 660 676 1020" stroke="#2a1317" stroke-width="38" fill="none"/>
+      <path d="M500 300 Q512 600 500 1000" stroke="#652e37" stroke-width="30" fill="none" opacity=".65"/>
+    </g>
+
+    <g fill="#efeadf" opacity="0.88">
+        <rect x="350" y="500" width="300" height="46" rx="3"/>
+        <rect x="396" y="570" width="208" height="30" rx="3"/>
+      </g>
+
+    <rect width="1000" height="1250" filter="url(#grain)" opacity=".055" style="mix-blend-mode:overlay"/>
+  </g>
+
+  <!-- Collar and hem sit slightly darker, as ribbing does -->
+  <path d="M316 262 Q500 228 684 262 L684 318 Q500 286 316 318 Z" fill="#2a1317" opacity="0.85"/>
+  <path d="M316 262 Q500 228 684 262 L684 318 L936 400 L866 890 L768 866
+        L780 1056 Q500 1090 220 1056 L232 866 L134 890 L64 400 L316 318 Z" fill="none" stroke="#2a1317" stroke-width="3" opacity="0.5"/>
+</svg>
