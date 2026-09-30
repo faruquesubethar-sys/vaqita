@@ -402,6 +402,14 @@ type MeshInput = {
   falloff: number;
   /** World position -> UV. The two silhouette sources map differently. */
   uvFor: (x: number, y: number) => [number, number];
+  /**
+   * Height of the body underneath, at a point, in world units.
+   *
+   * Without one the garment inflates symmetrically about its own outline and
+   * comes out as a cushion: no shoulders, no chest, no waist. Every fix
+   * attempted on the photograph side was really chasing this.
+   */
+  torso?: (x: number, y: number) => number;
 };
 
 /**
@@ -415,7 +423,7 @@ function meshFromSdf(input: MeshInput): {
   geometry: THREE.BufferGeometry;
   bounds: { x: number; y: number; w: number; h: number };
 } {
-  const { sdf, minX, maxX, minY, maxY, cols, rows, depth, falloff, uvFor } = input;
+  const { sdf, minX, maxX, minY, maxY, cols, rows, depth, falloff, uvFor, torso } = input;
 
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -498,7 +506,11 @@ function meshFromSdf(input: MeshInput): {
       // Fabric hangs — the lower the point, the more it drifts back and down.
       const hang = Math.max(0, -y) * 0.04;
 
-      const z = depth * puff + fold * puff;
+      // The garment takes the greater of its own thickness and the body
+      // beneath it, then both are faded out by `puff` so the front and back
+      // sheets still meet along the outline and the mesh stays closed.
+      const body = torso ? torso(x, y) : 0;
+      const z = Math.max(depth, body) * puff + fold * puff;
 
       // The UV is taken at the *snapped* position, so a vertex pulled onto the
       // outline samples the photograph's outline too rather than the texel it
@@ -675,6 +687,48 @@ function smoothField(field: Float32Array, width: number, height: number): Float3
  * inflation — one photograph cannot say how deep a garment is. This is a
  * faithful 3D of the garment's shape, not a scan of its volume.
  */
+/**
+ * The body a garment is worn on, as a depth at each point.
+ *
+ * Not a mannequin mesh — just the shape the cloth has to sit over. An
+ * elliptical cross-section whose width and depth vary with height: narrow at
+ * the hem, fullest through the chest, squaring off at the shoulders.
+ *
+ * The sleeves are deliberately left out of it. They hang off the arms, which
+ * are much thinner than the torso, so running the chest profile across the
+ * full width of a tee would blow the sleeves up into balloons. Beyond the
+ * body's half-width the depth falls away and the existing outline inflation
+ * takes over, which is about right for a sleeve.
+ */
+function torsoProfile(worldWidth: number, height: number) {
+  const halfW = worldWidth / 2;
+  // A tee is far wider than the body in it: the rest is sleeve.
+  const bodyHalf = halfW * 0.56;
+
+  return (x: number, y: number) => {
+    // 0 at the hem, 1 at the shoulders.
+    const v = Math.min(1, Math.max(0, y / height + 0.5));
+
+    // Waist in, chest out, shoulders square.
+    const widthAt = bodyHalf * (0.84 + 0.16 * smoothStep(v * 1.15));
+    const t = Math.abs(x) / widthAt;
+    if (t >= 1) return 0;
+
+    // Deepest through the chest rather than at either end.
+    const fullness = 0.62 + 0.38 * Math.sin(Math.PI * Math.min(1, v * 0.95 + 0.05));
+    const maxDepth = widthAt * 0.58 * fullness;
+
+    // Elliptical section. The square root is what makes it read as a body
+    // rather than a slab with rounded corners.
+    return maxDepth * Math.sqrt(1 - t * t);
+  };
+}
+
+function smoothStep(t: number): number {
+  const u = Math.min(1, Math.max(0, t));
+  return u * u * (3 - 2 * u);
+}
+
 export function buildGarmentFromMask(
   mask: SilhouetteMask,
   targetHeight: number,
@@ -776,6 +830,7 @@ export function buildGarmentFromMask(
     rows,
     depth,
     falloff,
+    torso: torsoProfile(worldWidth, targetHeight),
     // Identity mapping back onto the source photograph. Texel centres, not
     // texel corners — a half-pixel slip here shows as a fringe of background
     // colour around the sleeve.

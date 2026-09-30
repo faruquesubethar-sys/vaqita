@@ -17,6 +17,7 @@ import {
   type GarmentGeometryResult,
   type GarmentType,
 } from "./garment-geometry";
+import { Mannequin } from "./mannequin";
 import { silhouetteFromImage } from "./photo-silhouette";
 
 export type GarmentViewerProps = {
@@ -260,7 +261,13 @@ function Garment({
   });
 
   return (
-    <mesh ref={mesh} geometry={geometry} castShadow>
+    <>
+      {/* Only shown for a traced garment. On the parametric fallback the
+          silhouette is a generic shape that the body would not match, and a
+          neck poking through the wrong collar is worse than no neck. */}
+      {photoFit && <Mannequin height={height} />}
+
+      <mesh ref={mesh} geometry={geometry} castShadow>
       <shaderMaterial
         ref={material}
         uniforms={uniforms}
@@ -268,7 +275,8 @@ function Garment({
         fragmentShader={fabricFragmentShader}
         side={THREE.DoubleSide}
       />
-    </mesh>
+      </mesh>
+    </>
   );
 }
 
