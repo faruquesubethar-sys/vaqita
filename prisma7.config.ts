@@ -19,6 +19,9 @@ export default defineConfig({
     //
     // The application itself still uses the pooled DATABASE_URL, which is what
     // serverless hosting needs. Only the CLI reads this file.
-    url: process.env["DATABASE_URL_UNPOOLED"] ?? process.env["DATABASE_URL"],
+    // `||`, not `??`: an unset variable in a .env file is usually present and
+    // empty rather than absent, and `??` would pass that empty string straight
+    // through as the connection URL.
+    url: process.env["DATABASE_URL_UNPOOLED"] || process.env["DATABASE_URL"],
   },
 });
