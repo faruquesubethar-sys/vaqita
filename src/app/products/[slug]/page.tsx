@@ -13,21 +13,30 @@ import { Reveal } from "@/components/motion/reveal";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 
-export const revalidate = 3600;
+/**
+ * Rendered per request, never prerendered.
+ *
+ * This page reads cookies (session and cart) while rendering, so it cannot be
+ * a static page — and it must say so rather than letting Next infer it.
+ *
+ * Inference got this wrong in production and returned 500 for every product.
+ * The catalogue was empty when the site was built, so `generateStaticParams`
+ * produced nothing, no product page was ever rendered during the build, and
+ * the `cookies()` call was never observed. Next marked the route static. The
+ * first real request then tried to statically render a product, hit
+ * `cookies()`, and threw — a failure that could not happen locally, because
+ * by then the catalogue had a product in it and the build saw the truth.
+ *
+ * Stock is also per-piece here: most of this shop is one-of-a-kind, so an
+ * hour of cached HTML would keep offering something already sold.
+ */
+export const dynamic = "force-dynamic";
 
 /** Stable per-product number, so the print crackle never reshuffles. */
 function seedFromSlug(slug: string) {
   let h = 0;
   for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) % 997;
   return h;
-}
-
-export async function generateStaticParams() {
-  const products = await db.product.findMany({
-    where: { status: "ACTIVE" },
-    select: { slug: true },
-  });
-  return products.map((p) => ({ slug: p.slug }));
 }
 
 async function getProduct(slug: string) {

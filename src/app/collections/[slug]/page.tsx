@@ -10,12 +10,17 @@ import { Reveal } from "@/components/motion/reveal";
 import { SplitText } from "@/components/motion/split-text";
 import { db } from "@/lib/db";
 
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  const collections = await db.collection.findMany({ select: { slug: true } });
-  return collections.map((c) => ({ slug: c.slug }));
-}
+/**
+ * Rendered per request, for the same reason as the product page: this tree
+ * reads cookies while rendering, so it cannot be prerendered.
+ *
+ * It was previously prerendered from a list of the sections that existed at
+ * build time. Any section added afterwards was therefore not in that list,
+ * and the first request for it would try to render statically, hit
+ * `cookies()`, and return 500 — the same failure that took out every product
+ * page, waiting on the next section you add.
+ */
+export const dynamic = "force-dynamic";
 
 async function getCollection(slug: string) {
   return db.collection.findUnique({
