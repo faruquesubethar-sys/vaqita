@@ -246,6 +246,8 @@ export type SwanGeometries = {
   bezels: THREE.BufferGeometry;
   /** Fold lines across the gold, as line segments. */
   creases: THREE.BufferGeometry;
+  /** The gold collet the stone is set into. */
+  eyeBezel: THREE.ExtrudeGeometry;
   eye: THREE.ExtrudeGeometry;
   dispose: () => void;
 };
@@ -359,12 +361,31 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   const bezels = buildFoldedFacets("bezel");
   const creases = buildCreaseLines();
 
+  // Cut with a steep crown and a small flat top, the way a real stone is.
+  // A shallow bevel gave a rounded lozenge that caught one broad highlight;
+  // steep sides break the light into several small ones instead, which is
+  // what makes a gem look like a gem rather than a green bead.
+  // The collet: the same outline grown outward and left flat, so a ring of
+  // gold shows around the stone. Without it the eye is a green shape sitting
+  // on a gold shape, which is a sticker, not a setting.
+  const eyeBezel = new THREE.ExtrudeGeometry(
+    [toShape(insetPolygon(EYE, -3.4))],
+    {
+      depth: 0.03,
+      bevelEnabled: true,
+      bevelThickness: 0.018,
+      bevelSize: 0.012,
+      bevelSegments: quality === "high" ? 2 : 1,
+      curveSegments: 1,
+    },
+  );
+
   const eye = new THREE.ExtrudeGeometry([toShape(EYE)], {
-    depth: 0.045,
+    depth: 0.052,
     bevelEnabled: true,
-    bevelThickness: 0.016,
-    bevelSize: 0.012,
-    bevelSegments: quality === "high" ? 2 : 1,
+    bevelThickness: 0.055,
+    bevelSize: 0.026,
+    bevelSegments: quality === "high" ? 3 : 1,
     curveSegments: 1,
   });
 
@@ -384,12 +405,14 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   facets.translate(dx, dy, halfDepth - 0.005);
   bezels.translate(dx, dy, halfDepth - 0.005);
   creases.translate(dx, dy, halfDepth + 0.012);
-  eye.translate(dx, dy, halfDepth + 0.008);
+  eyeBezel.translate(dx, dy, halfDepth + 0.004);
+  eye.translate(dx, dy, halfDepth + 0.012);
 
   shell.computeVertexNormals();
   facets.computeVertexNormals();
   bezels.computeVertexNormals();
   eye.computeVertexNormals();
+  eyeBezel.computeVertexNormals();
 
   // A NaN vertex makes the whole mesh vanish without throwing, so it is worth
   // one explicit check rather than another silent invisible hero.
@@ -413,12 +436,14 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
     bezels,
     creases,
     eye,
+    eyeBezel,
     dispose: () => {
       shell.dispose();
       facets.dispose();
       bezels.dispose();
       creases.dispose();
       eye.dispose();
+      eyeBezel.dispose();
     },
   };
 }

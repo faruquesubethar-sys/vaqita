@@ -78,6 +78,12 @@ function useRig(): Rig {
   return rig;
 }
 
+/** Smoothstep with zero first and second derivatives at both ends. */
+function smootherstep(x: number, from: number, to: number): number {
+  const t = Math.min(1, Math.max(0, (x - from) / Math.max(to - from, 1e-4)));
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
 /* -------------------------------------------------------------- camera rig */
 
 /**
@@ -207,6 +213,32 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
     group.current.position.x = 0.35 + enterX;
     group.current.position.y = 0.08 + hoverY * ease + enterY - rebound;
     group.current.position.z = enterZ;
+
+    // --- the climb into the header ---------------------------------------
+    //
+    // As the hero scrolls away the mark rises toward the top of the frame,
+    // shrinks, and turns square-on — ending in the pose and roughly the place
+    // the flat logo occupies in the header, which fades in underneath it.
+    //
+    // It is a handoff rather than a literal landing. Chasing the header
+    // element's exact pixel position would mean reading its rect every frame
+    // and projecting it through an orbiting camera; the eye reads the
+    // substitution from the movement and the timing, and does not check the
+    // arithmetic.
+    const climb = smootherstep(rig.scroll, 0.12, 0.92);
+    if (climb > 0) {
+      const g = group.current;
+      g.position.x += (-0.35 - 0.02) * climb;
+      g.position.y += 1.55 * climb;
+      g.position.z += 1.1 * climb;
+      // Unwind the idle sway so it arrives level rather than mid-drift.
+      g.rotation.x *= 1 - climb;
+      g.rotation.y *= 1 - climb;
+      g.rotation.z *= 1 - climb;
+      g.scale.setScalar(0.56 * (1 - climb * 0.86));
+    } else {
+      group.current.scale.setScalar(0.56);
+    }
   });
 
   return (
@@ -271,16 +303,42 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
           />
         </mesh>
 
-        {/* The one real stone on the piece. It earns its brightness by being
-            the only thing on the swan that has any. */}
-        <mesh geometry={geo.eye}>
+        {/* The gold collet the stone is set into, a hair proud of the head,
+            so the eye reads as mounted rather than painted on. */}
+        <mesh geometry={geo.eyeBezel}>
           <meshStandardMaterial
+            color="#e6cb9c"
+            metalness={0.92}
+            roughness={0.22}
+            envMapIntensity={1.1}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+
+        {/*
+          The one real stone on the piece, and the only saturated thing on it.
+
+          Physical rather than standard: an emerald is not an opaque green
+          surface, it is a transparent one you see a little way into, and the
+          depth is most of what separates a cut stone from a green bead.
+          Light enters, bounces off the back facets and comes out somewhere
+          else, which is why it flashes as the mark turns instead of holding
+          one steady highlight.
+        */}
+        <mesh geometry={geo.eye}>
+          <meshPhysicalMaterial
             color="#0d764e"
-            emissive="#0d8f5c"
-            emissiveIntensity={1.5}
-            roughness={0.06}
-            metalness={0.15}
-            envMapIntensity={4.0}
+            emissive="#0a6344"
+            emissiveIntensity={0.45}
+            metalness={0}
+            roughness={0.03}
+            transmission={0.55}
+            thickness={0.28}
+            ior={1.78}
+            clearcoat={1}
+            clearcoatRoughness={0.02}
+            specularIntensity={1}
+            envMapIntensity={3.2}
           />
         </mesh>
 
@@ -633,9 +691,27 @@ export default function HeroScene() {
 
   useEffect(() => {
     // No reason to run a GPU on a scene nobody is looking at.
-    const onVisibility = () => setPaused(document.hidden);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
+    //
+    // Two ways to stop looking at it: switch tabs, or scroll past. The second
+    // matters more now that this layer is fixed — it used to scroll away with
+    // its section, and a fixed one would otherwise keep rendering a full 3D
+    // scene behind every section of the page, forever, for nothing.
+    let past = false;
+    const update = () => {
+      // A little beyond where the mark finishes climbing, so the handoff is
+      // complete before the scene stops.
+      past = window.scrollY > window.innerHeight * 1.12;
+      setPaused(document.hidden || past);
+    };
+
+    document.addEventListener("visibilitychange", update);
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+
+    return () => {
+      document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("scroll", update);
+    };
   }, []);
 
   return (

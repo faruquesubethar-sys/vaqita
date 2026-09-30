@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SwanLogo } from "@/components/brand/swan-mark";
 import { CartDrawer } from "@/components/cart/cart-drawer";
@@ -25,15 +25,38 @@ export function Header({ user }: { user: SessionUser | null }) {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  /**
+   * Whether the 3D mark in the hero has finished climbing into this spot.
+   *
+   * On the home page the hero's mark rises into the header as you scroll, and
+   * the flat one here takes over from it. Showing both at once during the
+   * climb would put two swans on screen, so this one waits.
+   *
+   * It is only ever false on a page that has the hero; everywhere else the
+   * header owns the mark from the first frame.
+   */
+  const [markReady, setMarkReady] = useState(true);
 
   // The bar condenses once you leave the hero, and retreats when you scroll
   // down so the page is never framed by chrome while reading.
+  // The hero renders the 3D mark; only that page needs the handoff.
+  const hasHero = useRef(false);
+
+  useEffect(() => {
+    hasHero.current = Boolean(document.querySelector("[data-hero-mark]"));
+    if (!hasHero.current) setMarkReady(true);
+    else setMarkReady(window.scrollY > window.innerHeight * 0.8);
+  }, [pathname]);
+
   useEffect(() => {
     let last = window.scrollY;
 
     const onScroll = () => {
       const y = window.scrollY;
       setScrolled(y > 40);
+      // The hero's mark lands at about 0.92 of a viewport. Handing over a
+      // little before it arrives lets the two cross-fade rather than blink.
+      setMarkReady(!hasHero.current || y > window.innerHeight * 0.8);
       setHidden(y > 320 && y > last && !menuOpen);
       last = y;
     };
@@ -126,7 +149,15 @@ export function Header({ user }: { user: SessionUser | null }) {
           {/* House mark and wordmark. The descriptor line collapses once the
               bar condenses, so the header loses height without losing identity. */}
           <Link href="/" className="justify-self-center" aria-label="VAQITA Mens Fashion Hub — home">
-            <SwanLogo id="hdr" compact={scrolled} markClassName={scrolled ? "h-6" : "h-8"} />
+            <SwanLogo
+              id="hdr"
+              compact={scrolled}
+              markClassName={cn(
+                scrolled ? "h-6" : "h-8",
+                "transition-opacity duration-500",
+                markReady ? "opacity-100" : "opacity-0",
+              )}
+            />
           </Link>
 
           <div className="flex items-center gap-7 justify-self-end">

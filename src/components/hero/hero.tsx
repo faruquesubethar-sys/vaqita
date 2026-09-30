@@ -15,6 +15,16 @@ const HeroScene = dynamic(() => import("./hero-scene"), {
 
 export function Hero() {
   const [show3D, setShow3D] = useState(true);
+  /** Fades the fixed 3D layer out once the mark has finished its climb. */
+  const [pastHero, setPastHero] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () =>
+      setPastHero(window.scrollY > window.innerHeight * 1.05);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <section className="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden">
@@ -24,8 +34,20 @@ export function Hero() {
         <div className="absolute inset-0 bg-[linear-gradient(105deg,transparent_38%,rgba(176,141,87,0.09)_50%,transparent_62%)]" />
       </div>
 
+      {/*
+        Fixed, not absolute. The mark has to climb into the header as the hero
+        scrolls away, and a layer that scrolls away with its section cannot do
+        that — it would leave the frame before it arrived. Behind everything
+        and inert, so nothing above it is affected.
+      */}
       {show3D && (
-        <div aria-hidden className="absolute inset-0 -z-10">
+        <div
+          aria-hidden
+          data-hero-mark
+          className={`pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500 ${
+            pastHero ? "opacity-0" : "opacity-100"
+          }`}
+        >
           <HeroScene />
         </div>
       )}
