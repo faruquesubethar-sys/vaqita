@@ -79,6 +79,49 @@ const EYE: [number, number][] = [
   [60.5, 31.3],
 ];
 
+/**
+ * The fold lines across the gold, traced from the photograph.
+ *
+ * Without these the neck is one smooth tapering tube, and a smooth tapering
+ * tube is a snake — which is exactly what people saw. The brooch reads as a
+ * bird because the folds tell you it is folded paper; the silhouette alone
+ * does not do it.
+ *
+ * Detected with Canny inside an eroded silhouette (so the outline itself is
+ * not picked up as a crease), grouped into line segments, then near-duplicates
+ * merged — a real fold produces a bundle of parallel hits, and the gold
+ * glitter produces dozens of short false ones, so only the long segments are
+ * kept.
+ */
+const CREASES: [[number, number], [number, number]][] = [
+  [[102.5, 143.5], [181.1, 64.9]],
+  [[121.6, 140.5], [193.3, 84.7]],
+  [[82.6, 175.6], [168.1, 175.6]],
+  [[107.8, 143.5], [165.8, 84]],
+  [[148.3, 93.1], [206.3, 35.1]],
+  [[54.4, 123.7], [102.5, 68.7]],
+  [[159, 179.4], [200.2, 138.2]],
+  [[105.5, 113], [146, 153.4]],
+  [[138.4, 113], [178.1, 72.5]],
+  [[112.4, 142.7], [155.2, 171.8]],
+  [[96.4, 159.5], [138.4, 129.8]],
+  [[171.9, 70.2], [205.5, 36.6]],
+  [[130, 139.7], [169.7, 115.3]],
+  [[49, 67.9], [71.9, 27.5]],
+  [[110.9, 126], [139.1, 90.8]],
+  [[52.9, 153.4], [87.2, 124.4]],
+  [[190.3, 84.7], [205.5, 44.3]],
+  [[166.6, 135.9], [197.9, 112.2]],
+  [[99.4, 142.7], [125.4, 116.8]],
+  [[65.1, 166.4], [101, 168.7]],
+  [[141.4, 145], [176.5, 137.4]],
+  [[77.3, 139.7], [78.1, 104.6]],
+  [[175, 128.2], [186.5, 96.2]],
+  [[68.1, 32.8], [86.5, 4.6]],
+  [[98.7, 84.7], [110.9, 55]],
+  [[87.2, 127.5], [107.8, 107.6]],
+];
+
 const CX = 125;
 const CY = 100;
 const SCALE = 0.016;
@@ -201,6 +244,8 @@ export type SwanGeometries = {
   facets: THREE.BufferGeometry;
   /** The gold lip each green panel is set into. */
   bezels: THREE.BufferGeometry;
+  /** Fold lines across the gold, as line segments. */
+  creases: THREE.BufferGeometry;
   eye: THREE.ExtrudeGeometry;
   dispose: () => void;
 };
@@ -285,6 +330,18 @@ function buildFoldedFacets(kind: "panel" | "bezel"): THREE.BufferGeometry {
   return g;
 }
 
+/** The fold lines, as a hairline overlay just proud of the gold. */
+function buildCreaseLines(): THREE.BufferGeometry {
+  const positions: number[] = [];
+  for (const [a, b] of CREASES) {
+    positions.push((a[0] - CX) * SCALE, -(a[1] - CY) * SCALE, 0);
+    positions.push((b[0] - CX) * SCALE, -(b[1] - CY) * SCALE, 0);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  return g;
+}
+
 export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometries {
   const bevelSegments = quality === "high" ? 3 : 1;
 
@@ -300,6 +357,7 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   // The wing's green panels, each genuinely folded rather than extruded flat.
   const facets = buildFoldedFacets("panel");
   const bezels = buildFoldedFacets("bezel");
+  const creases = buildCreaseLines();
 
   const eye = new THREE.ExtrudeGeometry([toShape(EYE)], {
     depth: 0.045,
@@ -325,6 +383,7 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
   const halfDepth = (box.max.z - box.min.z) / 2;
   facets.translate(dx, dy, halfDepth - 0.005);
   bezels.translate(dx, dy, halfDepth - 0.005);
+  creases.translate(dx, dy, halfDepth + 0.012);
   eye.translate(dx, dy, halfDepth + 0.008);
 
   shell.computeVertexNormals();
@@ -352,11 +411,13 @@ export function buildSwanGeometry(quality: "high" | "low" = "high"): SwanGeometr
     shell,
     facets,
     bezels,
+    creases,
     eye,
     dispose: () => {
       shell.dispose();
       facets.dispose();
       bezels.dispose();
+      creases.dispose();
       eye.dispose();
     },
   };

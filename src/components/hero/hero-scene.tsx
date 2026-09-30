@@ -240,6 +240,13 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
           Giving them gloss and emissive, as before, turned the wing into
           backlit plastic.
         */}
+        {/* The folds. Without them the neck is a smooth tapering tube, which
+            is a snake — the silhouette alone does not say "bird", the
+            creases do. */}
+        <lineSegments geometry={geo.creases}>
+          <lineBasicMaterial color="#6d4f29" transparent opacity={0.75} />
+        </lineSegments>
+
         {/* The gold lip each inlay sits in. Drawn first, fractionally lower,
             so a band of metal frames every green plane. */}
         <mesh geometry={geo.bezels}>
