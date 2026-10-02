@@ -48,7 +48,20 @@ export function toMinorUnits(major: number): number {
 
 export const FREE_SHIPPING_THRESHOLD_CENTS = 250_000; // ₹2,500
 export const STANDARD_SHIPPING_CENTS = 9_900; // ₹99
-export const TAX_RATE = 0.12; // GST placeholder
+/**
+ * Sales tax, as a fraction. Zero unless you set one.
+ *
+ * This was 0.12, a "GST placeholder" put in while scaffolding — which meant
+ * the shop quietly added 12% to every order from the first day. A seller who
+ * is not registered to collect GST must not be charging it, and one who is
+ * will know their own rate; neither is served by a number nobody chose.
+ *
+ * Set TAX_RATE in the environment if you are registered. 0.12 is 12%.
+ */
+export const TAX_RATE = (() => {
+  const raw = Number(process.env.TAX_RATE ?? process.env.NEXT_PUBLIC_TAX_RATE ?? 0);
+  return Number.isFinite(raw) && raw >= 0 && raw < 1 ? raw : 0;
+})();
 
 export function shippingFor(subtotalCents: number): number {
   if (subtotalCents <= 0) return 0;

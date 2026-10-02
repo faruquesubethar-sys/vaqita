@@ -135,10 +135,15 @@ export default function CartPage() {
                   : formatMoney(cart.shippingCents)}
               </dd>
             </div>
-            <div className="flex justify-between text-stone">
-              <dt>GST (12%)</dt>
-              <dd className="tabular-nums">{formatMoney(cart.taxCents)}</dd>
-            </div>
+            {/* Hidden when nothing is charged. The label also claimed a rate
+                of 12% outright, which was neither chosen nor necessarily
+                one this shop is registered to collect. */}
+            {cart.taxCents > 0 && (
+              <div className="flex justify-between text-stone">
+                <dt>Tax</dt>
+                <dd className="tabular-nums">{formatMoney(cart.taxCents)}</dd>
+              </div>
+            )}
             <div className="flex justify-between border-t border-bone/10 pt-4 text-base text-alabaster">
               <dt>Total</dt>
               <dd className="tabular-nums">{formatMoney(cart.totalCents)}</dd>

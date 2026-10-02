@@ -111,10 +111,14 @@ export default async function SuccessPage({
                   : formatMoney(order.shippingCents)}
               </dd>
             </div>
-            <div className="flex justify-between text-stone">
-              <dt>Tax</dt>
-              <dd className="tabular-nums">{formatMoney(order.taxCents)}</dd>
-            </div>
+            {/* Hidden when nothing is charged, rather than shown as a
+                confident "Tax ₹0" on every order. */}
+            {order.taxCents > 0 && (
+              <div className="flex justify-between text-stone">
+                <dt>Tax</dt>
+                <dd className="tabular-nums">{formatMoney(order.taxCents)}</dd>
+              </div>
+            )}
             <div className="flex justify-between border-t border-bone/10 pt-3 text-base text-alabaster">
               <dt>Total</dt>
               <dd className="tabular-nums">{formatMoney(order.totalCents)}</dd>

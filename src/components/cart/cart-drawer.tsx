@@ -210,10 +210,14 @@ export function CartDrawer() {
                     {cart.shippingCents === 0 ? "—" : formatMoney(cart.shippingCents)}
                   </dd>
                 </div>
-                <div className="flex justify-between text-stone">
-                  <dt>Tax</dt>
-                  <dd className="tabular-nums">{formatMoney(cart.taxCents)}</dd>
-                </div>
+                {/* Hidden when nothing is charged, rather than shown as a
+                    confident "Tax ₹0" on every order. */}
+                {cart.taxCents > 0 && (
+                  <div className="flex justify-between text-stone">
+                    <dt>Tax</dt>
+                    <dd className="tabular-nums">{formatMoney(cart.taxCents)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-bone/10 pt-3 text-sm text-alabaster">
                   <dt>Total</dt>
                   <dd className="tabular-nums">{formatMoney(cart.totalCents)}</dd>

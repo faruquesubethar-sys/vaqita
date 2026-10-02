@@ -39,6 +39,33 @@ const statusSchema = z.object({
   status: z.enum(ORDER_STATUSES),
 });
 
+/**
+ * Runs a database write and reports a failure instead of throwing.
+ *
+ * Server actions that throw take the whole page to the error boundary — the
+ * admin panel showed "A loose thread" with nothing said about what failed or
+ * what to do. A shop owner adding stock needs the form to stay where it is
+ * and tell them, not to lose the page.
+ *
+ * The real error is logged rather than shown. Database messages name tables
+ * and constraints, which is of no use to the person reading and of some use
+ * to anyone else.
+ */
+async function attempt<T>(
+  what: string,
+  run: () => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  try {
+    return { ok: true, value: await run() };
+  } catch (error) {
+    console.error(`[admin] ${what} failed:`, error);
+    return {
+      ok: false,
+      error: `Could not ${what}. Nothing was changed — try again, and if it keeps happening send us this: ${new Date().toISOString().slice(0, 16)}.`,
+    };
+  }
+}
+
 export async function updateOrderStatus(formData: FormData): Promise<AdminResult> {
   const denied = await guard();
   if (denied) return { ok: false, error: denied };
@@ -238,13 +265,18 @@ export async function createProduct(formData: FormData): Promise<AdminResult> {
   // Slugs must stay unique; suffix until one is free rather than failing.
   const base = slugify(d.name) || "piece";
   let slug = base;
-  for (let n = 2; await db.product.findUnique({ where: { slug } }); n++) {
-    slug = `${base}-${n}`;
-  }
 
-  const maxPosition = await db.product.aggregate({ _max: { position: true } });
+  const prepared = await attempt("add that piece", async () => {
+    for (let n = 2; await db.product.findUnique({ where: { slug } }); n++) {
+      slug = `${base}-${n}`;
+    }
+    return db.product.aggregate({ _max: { position: true } });
+  });
+  if (!prepared.ok) return { ok: false, error: prepared.error };
+  const maxPosition = prepared.value;
 
-  const product = await db.product.create({
+  const created = await attempt("add that piece", () =>
+    db.product.create({
     data: {
       slug,
       name: d.name,
@@ -255,22 +287,36 @@ export async function createProduct(formData: FormData): Promise<AdminResult> {
       graphicStyle: d.graphicStyle,
       status: "DRAFT",
       position: (maxPosition._max.position ?? 0) + 1,
-    },
-  });
+      },
+    }),
+  );
+  if (!created.ok) return { ok: false, error: created.error };
+  const product = created.value;
 
   // A product with no variants cannot be bought or tried on, so give it a full
   // size run in the colourway straight away.
-  await db.variant.createMany({
-    data: DEFAULT_SIZES.map((size, i) => ({
-      productId: product.id,
-      sku: `VQ-${slug.slice(0, 6).toUpperCase()}-${d.colorName.slice(0, 3).toUpperCase()}-${size}`,
-      size,
-      color: d.colorName,
-      colorHex: d.colorHex,
-      stock: d.stock,
-      position: i,
-    })),
-  });
+  //
+  // The SKU is built from the product's own id, not from its name. It used to
+  // be the first six letters of the slug plus three of the colour, and `sku`
+  // is unique across the whole table — so a second product whose name began
+  // with the same six letters in the same colourway collided, the database
+  // refused the write, and the admin panel fell over to the error page with
+  // nothing explaining why. "Mustang tee" and "Mustang acid wash" is all it
+  // took.
+  const sized = await attempt("add sizes to that piece", () =>
+    db.variant.createMany({
+      data: DEFAULT_SIZES.map((size, i) => ({
+        productId: product.id,
+        sku: `VQ-${product.id.slice(-8).toUpperCase()}-${size}`,
+        size,
+        color: d.colorName,
+        colorHex: d.colorHex,
+        stock: d.stock,
+        position: i,
+      })),
+    }),
+  );
+  if (!sized.ok) return { ok: false, error: sized.error };
 
   revalidatePath("/admin/products");
   return {

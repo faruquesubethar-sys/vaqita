@@ -17,6 +17,10 @@ const COLUMNS = [
   {
     title: "Client care",
     links: [
+      // Support goes straight to WhatsApp. A contact page that asks someone
+      // to wait for a reply is a worse answer than the channel the shop
+      // actually watches.
+      { href: CONTACT.whatsapp, label: "Customer support", external: true },
       { href: "/contact", label: "Contact us" },
       { href: "/account", label: "Your orders" },
       { href: "/cart", label: "Your bag" },
@@ -29,6 +33,7 @@ const COLUMNS = [
       { href: "/collections", label: "Everything in stock" },
       { href: "/#sorting", label: "How we buy" },
       { href: "/#materials", label: "Fabrics" },
+      { href: "/about", label: "About us" },
     ],
   },
 ];
@@ -83,15 +88,32 @@ export function Footer() {
             <ul className="mt-5 space-y-3">
               {col.links.map((link) => (
                 <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="group text-sm text-stone transition-colors hover:text-alabaster"
-                  >
-                    <span className="link-underline">
-                      {link.label}
-                      <span className="link-underline-bar" />
-                    </span>
-                  </Link>
+                  {/* An off-site link is a plain anchor with rel set. Routing
+                      WhatsApp through next/link would have it try to treat the
+                      address as an internal route. */}
+                  {"external" in link && link.external ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group text-sm text-stone transition-colors hover:text-alabaster"
+                    >
+                      <span className="link-underline">
+                        {link.label}
+                        <span className="link-underline-bar" />
+                      </span>
+                    </a>
+                  ) : (
+                    <Link
+                      href={link.href}
+                      className="group text-sm text-stone transition-colors hover:text-alabaster"
+                    >
+                      <span className="link-underline">
+                        {link.label}
+                        <span className="link-underline-bar" />
+                      </span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
