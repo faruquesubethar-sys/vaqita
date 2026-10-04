@@ -36,7 +36,22 @@ export type GarmentType =
   | "TRACK_TOP"
   | "TRACK_PANT"
   | "TROUSER"
-  | "CAP";
+  | "CAP"
+  | "FOOTWEAR";
+
+/**
+ * Whether a garment type gets a fitting room at all.
+ *
+ * The 3D here works by inflating a flat silhouette into cloth. That is a
+ * reasonable description of a tee and a poor one of a shoe, which is a rigid
+ * object with a sole, and of a buttoned shirt, which has a placket and a
+ * collar standing away from the body that a single inflated sheet cannot
+ * show. Offering a fitting room that flatters neither is worse than offering
+ * photographs, which are honest.
+ */
+export function supportsFittingRoom(type: string): boolean {
+  return type !== "FOOTWEAR" && type !== "SHIRT";
+}
 
 type Sdf = (x: number, y: number) => number;
 

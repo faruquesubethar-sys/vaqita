@@ -109,7 +109,7 @@ export default function AboutPage() {
               {[
                 ["Stock", "New, imported in small lots"],
                 ["Sizing", "One of each — never restocked"],
-                ["Shipping", "From India. Free over ₹2,500"],
+                ["Shipping", "From India. ₹50 flat"],
                 ["Returns", "Seven days, refunded not exchanged"],
                 ["Support", "WhatsApp, usually within hours"],
               ].map(([term, detail]) => (

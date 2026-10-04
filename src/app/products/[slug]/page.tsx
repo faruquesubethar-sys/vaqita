@@ -8,6 +8,7 @@ import {
 } from "@/components/catalogue/product-card";
 import { ProductGallery } from "@/components/catalogue/product-gallery";
 import { ProductPurchase } from "@/components/catalogue/product-purchase";
+import { supportsFittingRoom } from "@/components/tryon/garment-geometry";
 import { TryIt } from "@/components/tryon/try-it";
 import { Reveal } from "@/components/motion/reveal";
 import { db } from "@/lib/db";
@@ -154,6 +155,7 @@ export default async function ProductPage({
 
           {/* Try-on sits above the buy controls: looking at the garment is the
               step before choosing a size, not after it. */}
+          {supportsFittingRoom(product.garmentType) && (
           <TryIt
             className="mt-9 w-full"
             productName={product.name}
@@ -173,6 +175,7 @@ export default async function ProductPage({
             }))}
             label="Try it on in 3D"
           />
+          )}
 
           <ProductPurchase
             variants={product.variants}

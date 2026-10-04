@@ -106,9 +106,7 @@ export default async function SuccessPage({
             <div className="flex justify-between text-stone">
               <dt>Shipping</dt>
               <dd className="tabular-nums">
-                {order.shippingCents === 0
-                  ? "Complimentary"
-                  : formatMoney(order.shippingCents)}
+                formatMoney(order.shippingCents)
               </dd>
             </div>
             {/* Hidden when nothing is charged, rather than shown as a

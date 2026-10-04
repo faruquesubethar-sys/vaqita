@@ -67,7 +67,7 @@ export function Hero() {
 
       <div className="shell relative z-10 pb-[clamp(3rem,9vh,7rem)] pt-40">
         <p className="eyebrow animate-fade-up" style={{ animationDelay: "120ms" }}>
-          Surplus · Vintage · Tees · Polos · Trouser
+          Surplus · Vintage · Tees · Polos · Trouser · Shirts · Footwear
         </p>
 
         {/* The shimmer runs once the letters have landed, not with them —

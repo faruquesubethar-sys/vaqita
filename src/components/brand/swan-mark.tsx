@@ -43,19 +43,24 @@ export function SwanMark({
       fill="none"
     >
       <defs>
-        {/* Champagne, not yellow. Sampled off the brooch: body #bea489,
-            shadow #a47957, highlight #fbeabf. */}
+        {/* Warmer than the sampled #bea489, to match the 3D mark.
+
+            The sample is faithful to a photograph of the piece on white
+            paper, where the metal picks up the paper and reads pale. Against
+            this page's near-black it goes chalky and stops looking like gold,
+            so both marks are warmed the same way rather than one being
+            correct and the other looking right. */}
         <linearGradient id={gold} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#fbeabf" />
-          <stop offset="34%" stopColor="#d9bc93" />
-          <stop offset="72%" stopColor="#bea489" />
-          <stop offset="100%" stopColor="#8f6a48" />
+          <stop offset="0%" stopColor="#ffe9ae" />
+          <stop offset="32%" stopColor="#efc563" />
+          <stop offset="70%" stopColor="#d9a441" />
+          <stop offset="100%" stopColor="#8c6422" />
         </linearGradient>
 
         <linearGradient id={goldEdge} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor="#8f6a48" />
-          <stop offset="50%" stopColor="#fbeabf" />
-          <stop offset="100%" stopColor="#a47957" />
+          <stop offset="0%" stopColor="#8c6422" />
+          <stop offset="50%" stopColor="#ffe9ae" />
+          <stop offset="100%" stopColor="#c99233" />
         </linearGradient>
 
         {/* Forest inlay, lifted a step from the #3b4f44 measured off the
@@ -118,7 +123,7 @@ export function SwanMark({
       <path d="M55.2 35.9 L58.2 41.2 L65.8 41.2 L69.7 45.8 L72.7 43.5 L69.7 32.1 L66.6 29.8 L60.5 31.3 Z" fill={`url(#${eye})`} />
 
       {/* A few specks of the glitter in the real gold. */}
-      <g fill="#fbeabf" opacity="0.7">
+      <g fill="#ffe9ae" opacity="0.7">
         <circle cx="168" cy="92" r="1.4" />
         <circle cx="120" cy="150" r="1.2" />
         <circle cx="72" cy="120" r="1.2" />

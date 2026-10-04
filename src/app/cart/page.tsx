@@ -4,12 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { useCart } from "@/components/cart/cart-provider";
-import { FREE_SHIPPING_THRESHOLD_CENTS, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 export default function CartPage() {
   const { cart, update, remove, isPending } = useCart();
-
-  const remaining = FREE_SHIPPING_THRESHOLD_CENTS - cart.subtotalCents;
 
   if (cart.lines.length === 0) {
     return (
@@ -130,9 +128,7 @@ export default function CartPage() {
             <div className="flex justify-between text-stone">
               <dt>Shipping</dt>
               <dd className="tabular-nums">
-                {cart.shippingCents === 0
-                  ? "Complimentary"
-                  : formatMoney(cart.shippingCents)}
+                formatMoney(cart.shippingCents)
               </dd>
             </div>
             {/* Hidden when nothing is charged. The label also claimed a rate
@@ -150,11 +146,6 @@ export default function CartPage() {
             </div>
           </dl>
 
-          {remaining > 0 && (
-            <p className="mt-5 text-xs leading-relaxed text-brass-lit">
-              Add {formatMoney(remaining)} for complimentary shipping.
-            </p>
-          )}
 
           <Link
             href="/checkout"

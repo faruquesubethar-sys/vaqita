@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CursorLight } from "@/components/motion/cursor-light";
 
+import { supportsFittingRoom } from "@/components/tryon/garment-geometry";
 import { TryIt } from "@/components/tryon/try-it";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -124,8 +125,9 @@ export function ProductCard({
           </span>
         )}
 
-        {/* Try-on, revealed on hover and always reachable by keyboard. */}
-        {inStock && (
+        {/* Try-on, revealed on hover and always reachable by keyboard.
+            Not offered for shapes the fitting room cannot represent. */}
+        {inStock && supportsFittingRoom(product.garmentType) && (
           <div className="absolute inset-x-3 bottom-3 translate-y-3 opacity-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/card:translate-y-0 group-hover/card:opacity-100 focus-within:translate-y-0 focus-within:opacity-100">
             <TryIt
               className="w-full !py-3 bg-ink/70 backdrop-blur-sm"

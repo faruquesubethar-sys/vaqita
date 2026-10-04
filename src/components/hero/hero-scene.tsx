@@ -245,23 +245,25 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
     <group ref={group} position={[0.35, 0.08, 0]} scale={0.56}>
       <group ref={inner}>
         {/*
-          Colours sampled from the reference brooch rather than chosen.
-          Percentiles across the photograph gave gold body #bea489, shadow
-          #a47957, highlight #fbeabf; panels #3b4f44; eye #0d764e.
+          Panels and stone are sampled from the reference brooch: #3b4f44 for
+          the inlays, #0d764e for the eye. Those stay.
 
-          The previous values were #eab308 gold and #059669 panels — a bright
-          yellow and a mint green. The real piece is champagne gold against
-          near-black forest, and the whole character of it lives in how muted
-          those panels are next to the one vivid stone.
+          The gold does not. Sampling gave #bea489, which is honest about the
+          photograph — a piece shot on white paper, where the metal picks up
+          the paper and reads as pale champagne. On this near-black page the
+          same value has nothing to sit against and goes chalky, and the mark
+          stops looking like gold at all. #d9a441 is warmer than the
+          measurement and righter than it: it is the colour the brooch would
+          be under this light, not the colour it was under that one.
         */}
         <mesh geometry={geo.shell}>
           <meshStandardMaterial
-            color="#bea489"
-            emissive="#4a3520"
-            emissiveIntensity={0.05}
-            metalness={0.84}
-            roughness={0.44}
-            envMapIntensity={0.7}
+            color="#d9a441"
+            emissive="#6b4a12"
+            emissiveIntensity={0.1}
+            metalness={0.88}
+            roughness={0.33}
+            envMapIntensity={0.95}
           />
         </mesh>
 
@@ -307,7 +309,7 @@ function HouseMark({ rig, quality }: { rig: Rig; quality: Quality }) {
             so the eye reads as mounted rather than painted on. */}
         <mesh geometry={geo.eyeBezel}>
           <meshStandardMaterial
-            color="#e6cb9c"
+            color="#efc563"
             metalness={0.92}
             roughness={0.22}
             envMapIntensity={1.1}

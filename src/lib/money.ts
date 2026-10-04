@@ -46,8 +46,15 @@ export function toMinorUnits(major: number): number {
 // jurisdictions arrive. Checkout, cart and order creation all call these, so
 // the totals shown can never drift from the totals charged.
 
-export const FREE_SHIPPING_THRESHOLD_CENTS = 250_000; // ₹2,500
-export const STANDARD_SHIPPING_CENTS = 9_900; // ₹99
+/**
+ * Flat ₹50 on every order, however large.
+ *
+ * There was a ₹99 charge waived above ₹2,500. Free delivery over a threshold
+ * is a device for pushing basket sizes up, and this shop sells single pieces
+ * that cannot be reordered — there is no second one to add. One flat, small,
+ * predictable number is easier to state and easier to trust.
+ */
+export const STANDARD_SHIPPING_CENTS = 5_000; // ₹50
 /**
  * Sales tax, as a fraction. Zero unless you set one.
  *
@@ -65,7 +72,7 @@ export const TAX_RATE = (() => {
 
 export function shippingFor(subtotalCents: number): number {
   if (subtotalCents <= 0) return 0;
-  return subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : STANDARD_SHIPPING_CENTS;
+  return STANDARD_SHIPPING_CENTS;
 }
 
 export function taxFor(subtotalCents: number): number {

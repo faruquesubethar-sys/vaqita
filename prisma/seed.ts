@@ -67,6 +67,24 @@ const COLLECTIONS = [
     heroImage: "/products/collection-trousers.svg",
     position: 5,
   },
+  {
+    slug: "shirts",
+    name: "Shirts",
+    tagline: "Collar and placket.",
+    description:
+      "Buttoned shirts, imported new — oxford, chambray and twill. Shown as photographs rather than in 3D: a collar standing away from the body and a placket down the front are not things an inflated silhouette can tell the truth about.",
+    heroImage: "/products/collection-surplus.svg",
+    position: 6,
+  },
+  {
+    slug: "footwear",
+    name: "Footwear",
+    tagline: "What you stand in.",
+    description:
+      "Imported new, in single pairs. Photographs only — a shoe is a rigid object with a sole, and the fitting room here shapes cloth, so it would flatter nothing.",
+    heroImage: "/products/collection-accessories.svg",
+    position: 7,
+  },
 ];
 
 /**

@@ -34,7 +34,7 @@ export default async function CollectionsPage() {
           <SplitText text="In stock" />
         </h1>
         <p className="mt-7 max-w-xl text-[0.95rem] leading-relaxed text-stone">
-          Surplus, vintage, tees, polo tees and trousers. New imported stock,
+          Surplus, vintage, tees, polos, trousers, shirts and footwear. New imported stock,
           photographed piece by piece, with a 3D fitting room on every one.
         </p>
       </header>

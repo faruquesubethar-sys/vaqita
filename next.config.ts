@@ -14,6 +14,20 @@ const nextConfig: NextConfig = {
   transpilePackages: ["three"],
   experimental: {
     optimizePackageImports: ["@react-three/drei", "gsap"],
+    serverActions: {
+      /**
+       * Product photographs are sent through a server action, and the default
+       * ceiling on that body is 1MB.
+       *
+       * A trimmed 1024px cut-out with an alpha channel is routinely 1.5–3MB,
+       * so uploading worked for a plain tee and threw for a busy one — the
+       * admin panel fell to the error page, apparently at random, with
+       * nothing to connect it to the size of the picture. The upload route
+       * already refuses anything over 6MB with a message; this is the headroom
+       * that lets that check be the one doing the refusing.
+       */
+      bodySizeLimit: "8mb",
+    },
   },
 };
 

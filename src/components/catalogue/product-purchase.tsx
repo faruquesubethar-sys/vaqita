@@ -179,8 +179,8 @@ export function ProductPurchase({
       </button>
 
       <p className="mt-5 text-xs leading-relaxed text-smoke">
-        Free shipping over ₹2,500 · Seven-day returns, tags on and unworn ·
-        Stock comes in one of each size, so a return is refunded rather than
+        ₹50 delivery, flat · Seven-day returns, tags on and unworn · Stock
+        comes in one of each size, so a return is refunded rather than
         exchanged — we will not have another.
       </p>
     </div>

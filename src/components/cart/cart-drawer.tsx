@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { useCart } from "@/components/cart/cart-provider";
-import { FREE_SHIPPING_THRESHOLD_CENTS, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 export function CartDrawer() {
@@ -38,9 +38,6 @@ export function CartDrawer() {
     const t = setTimeout(dismissNotice, 5000);
     return () => clearTimeout(t);
   }, [notice, dismissNotice]);
-
-  const remaining = FREE_SHIPPING_THRESHOLD_CENTS - cart.subtotalCents;
-  const progress = Math.min(cart.subtotalCents / FREE_SHIPPING_THRESHOLD_CENTS, 1);
 
   return (
     <>
@@ -178,27 +175,6 @@ export function CartDrawer() {
             </div>
 
             <footer className="border-t border-bone/10 px-7 py-6">
-              {/* Shipping threshold. A progress bar here reliably lifts basket
-                  size, and it is honest: the number is the real threshold. */}
-              <div className="mb-5">
-                <p className="mb-2 text-[0.6875rem] tracking-wide text-stone">
-                  {remaining > 0 ? (
-                    <>
-                      <span className="text-brass-lit">{formatMoney(remaining)}</span> more
-                      for complimentary shipping
-                    </>
-                  ) : (
-                    <span className="text-success">Complimentary shipping applied</span>
-                  )}
-                </p>
-                <div className="h-px w-full bg-bone/12">
-                  <div
-                    className="h-px bg-brass transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                    style={{ width: `${progress * 100}%` }}
-                  />
-                </div>
-              </div>
-
               <dl className="space-y-2 text-xs">
                 <div className="flex justify-between text-stone">
                   <dt>Subtotal</dt>

@@ -18,7 +18,19 @@ const ORDER_STATUSES = [
   "REFUNDED",
 ] as const;
 
-const GARMENT_TYPES = ["TEE", "LONG_SLEEVE", "SHIRT", "TANK", "HOODIE", "POLO", "TRACK_TOP", "TRACK_PANT", "TROUSER", "CAP"] as const;
+const GARMENT_TYPES = [
+  "TEE",
+  "LONG_SLEEVE",
+  "SHIRT",
+  "TANK",
+  "HOODIE",
+  "POLO",
+  "TRACK_TOP",
+  "TRACK_PANT",
+  "TROUSER",
+  "CAP",
+  "FOOTWEAR",
+] as const;
 const PRINT_STYLES = ["NONE", "BLOCK", "ARCH", "STAMP", "SWAN"] as const;
 const PRODUCT_STATUSES = ["ACTIVE", "DRAFT", "ARCHIVED"] as const;
 
@@ -237,6 +249,14 @@ const newProductSchema = z.object({
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a hex value like #2b2b2e."),
   stock: z.coerce.number().int().min(0).max(9999),
+  /**
+   * Blank creates the full size run. A value creates that one size only.
+   *
+   * Most of this stock arrives as a single piece in a single size, and the
+   * old behaviour — always a full run of five — meant adding one tee and then
+   * deleting four sizes that never existed, every time.
+   */
+  size: z.string().trim().max(12).optional(),
 });
 
 const DEFAULT_SIZES = ["S", "M", "L", "XL", "XXL"];
@@ -254,6 +274,7 @@ export async function createProduct(formData: FormData): Promise<AdminResult> {
     colorName: formData.get("colorName"),
     colorHex: formData.get("colorHex"),
     stock: formData.get("stock") ?? "0",
+    size: formData.get("size") ?? "",
   });
 
   if (!parsed.success) {
@@ -303,9 +324,12 @@ export async function createProduct(formData: FormData): Promise<AdminResult> {
   // refused the write, and the admin panel fell over to the error page with
   // nothing explaining why. "Mustang tee" and "Mustang acid wash" is all it
   // took.
+  // One size when told, the full run otherwise.
+  const sizes = d.size ? [d.size.toUpperCase()] : DEFAULT_SIZES;
+
   const sized = await attempt("add sizes to that piece", () =>
     db.variant.createMany({
-      data: DEFAULT_SIZES.map((size, i) => ({
+      data: sizes.map((size, i) => ({
         productId: product.id,
         sku: `VQ-${product.id.slice(-8).toUpperCase()}-${size}`,
         size,
@@ -321,7 +345,10 @@ export async function createProduct(formData: FormData): Promise<AdminResult> {
   revalidatePath("/admin/products");
   return {
     ok: true,
-    message: `${d.name} created as a draft with ${DEFAULT_SIZES.length} sizes. Add imagery, then set it Active.`,
+    message:
+      sizes.length === 1
+        ? `${d.name} created as a draft in size ${sizes[0]} only. Add imagery, then set it Active.`
+        : `${d.name} created as a draft with ${sizes.length} sizes. Add imagery, then set it Active.`,
   };
 }
 
@@ -471,21 +498,27 @@ export async function uploadProductImage(formData: FormData): Promise<AdminResul
     return { ok: false, error: "Could not store that image. Try again." };
   }
 
-  await db.productImage.create({
-    data: {
-      productId: product.id,
-      url,
-      alt,
-      position: product._count.images,
-    },
-  });
-
-  if (setAsTexture || setAsBackTexture) {
-    await db.product.update({
-      where: { id: product.id },
-      data: setAsBackTexture ? { textureBackUrl: url } : { textureUrl: url },
+  // Recorded under attempt for the same reason as everything else here: a
+  // thrown write took the admin page down and lost the upload, with the image
+  // already sitting in storage and nothing pointing at it.
+  const recorded = await attempt("save that image", async () => {
+    await db.productImage.create({
+      data: {
+        productId: product.id,
+        url,
+        alt,
+        position: product._count.images,
+      },
     });
-  }
+
+    if (setAsTexture || setAsBackTexture) {
+      await db.product.update({
+        where: { id: product.id },
+        data: setAsBackTexture ? { textureBackUrl: url } : { textureUrl: url },
+      });
+    }
+  });
+  if (!recorded.ok) return { ok: false, error: recorded.error };
 
   revalidatePath("/admin/products");
   revalidatePath(`/products/${product.slug}`);

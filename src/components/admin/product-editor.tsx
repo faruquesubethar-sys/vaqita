@@ -16,7 +16,19 @@ import {
 import { ImageUpload } from "@/components/admin/image-upload";
 import { cn } from "@/lib/utils";
 
-const GARMENT_TYPES = ["TEE", "LONG_SLEEVE", "SHIRT", "TANK", "HOODIE", "POLO", "TRACK_TOP", "TRACK_PANT", "TROUSER", "CAP"];
+const GARMENT_TYPES = [
+  "TEE",
+  "LONG_SLEEVE",
+  "SHIRT",
+  "TANK",
+  "HOODIE",
+  "POLO",
+  "TRACK_TOP",
+  "TRACK_PANT",
+  "TROUSER",
+  "CAP",
+  "FOOTWEAR",
+];
 const PRINT_STYLES = ["NONE", "BLOCK", "ARCH", "STAMP", "SWAN"];
 
 export type AdminVariant = {
@@ -552,16 +564,37 @@ function NewProductForm({ collections }: { collections: AdminCollection[] }) {
               name="stock"
               type="number"
               min={0}
-              defaultValue={5}
+              defaultValue={1}
               className={field}
             />
           </div>
         </div>
 
+        <div>
+          <label className={label} htmlFor="new-size">
+            Size
+          </label>
+          <input
+            id="new-size"
+            name="size"
+            placeholder="Leave blank for S / M / L / XL / XXL"
+            maxLength={12}
+            className={field}
+          />
+          {/* Most stock here is a single piece in a single size. Creating a
+              full run every time meant adding one tee and then deleting four
+              sizes that never existed. */}
+          <p className="mt-2 text-[0.6875rem] leading-relaxed text-smoke">
+            One size only — type it, e.g. <span className="text-stone">L</span>{" "}
+            or <span className="text-stone">42</span>. Leave it empty to create
+            the full size run.
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={label} htmlFor="new-garment">
-              3D garment
+              Garment shape
             </label>
             <select id="new-garment" name="garmentType" className={selectField}>
               {GARMENT_TYPES.map((t) => (

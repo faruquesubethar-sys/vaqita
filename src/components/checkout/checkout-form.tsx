@@ -242,7 +242,7 @@ export function CheckoutForm({
           <div className="flex justify-between text-stone">
             <dt>Shipping</dt>
             <dd className="tabular-nums">
-              {cart.shippingCents === 0 ? "Complimentary" : formatMoney(cart.shippingCents)}
+              formatMoney(cart.shippingCents)
             </dd>
           </div>
           {/* Hidden when nothing is charged, rather than shown as a

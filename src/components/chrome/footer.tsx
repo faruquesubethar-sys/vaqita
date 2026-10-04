@@ -12,6 +12,8 @@ const COLUMNS = [
       { href: "/collections/tees", label: "Tees" },
       { href: "/collections/polo-tees", label: "Polo Tees" },
       { href: "/collections/trouser", label: "Trouser" },
+      { href: "/collections/shirts", label: "Shirts" },
+      { href: "/collections/footwear", label: "Footwear" },
     ],
   },
   {
