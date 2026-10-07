@@ -74,9 +74,9 @@ export function Hero() {
             a band of light crossing a headline that is still assembling
             reads as a glitch rather than as gloss. */}
         <h1 className="display shimmer mt-7 text-[clamp(3rem,10.5vw,10.5rem)] text-alabaster [--shimmer-delay:1.5s]">
-          <SplitText text="Imported once." delay={0.15} />
+          <SplitText text="Somebody wore" delay={0.15} />
           <span className="block italic text-brass-lit">
-            <SplitText text="Never again." delay={0.38} />
+            <SplitText text="it first." delay={0.38} />
           </span>
         </h1>
 
