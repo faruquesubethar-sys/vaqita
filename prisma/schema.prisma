@@ -240,3 +240,21 @@ model OrderItem {
 
   @@index([orderId])
 }
+
+// ---------------------------------------------------------------- security
+
+/// One failed sign-in. Counted to slow down guessing.
+///
+/// In the database rather than in memory on purpose: the site runs on
+/// serverless functions, so an in-memory counter is per-instance and an
+/// attacker spreading requests across instances never meets it.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  /// "email:someone@example.com" or "ip:1.2.3.4" — both are counted, so a
+  /// single address cannot be ground down from many machines, and a single
+  /// machine cannot work through many addresses.
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

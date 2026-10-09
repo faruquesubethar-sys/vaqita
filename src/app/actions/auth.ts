@@ -10,6 +10,12 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  checkRateLimit,
+  clearFailures,
+  clientKey,
+  recordFailure,
+} from "@/lib/rate-limit";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -38,18 +44,35 @@ export async function signIn(
     return { error: parsed.error.issues[0]?.message ?? "Check your details." };
   }
 
-  const user = await db.user.findUnique({
-    where: { email: parsed.data.email.toLowerCase() },
-  });
+  const email = parsed.data.email.toLowerCase();
+  const keys = [`email:${email}`, await clientKey()];
+
+  // Checked before the password is even looked at, so a refused attempt costs
+  // an attacker a round trip and tells them nothing.
+  const limit = await checkRateLimit(keys);
+  if (limit.blocked) {
+    return {
+      error: `Too many attempts. Wait ${limit.minutes} minutes and try again.`,
+    };
+  }
+
+  const user = await db.user.findUnique({ where: { email } });
 
   // Deliberately identical message for "no such user" and "wrong password".
   // Distinguishing them tells an attacker which addresses are registered.
   const invalid = { error: "That email and password don't match." };
-  if (!user) return invalid;
+  if (!user) {
+    await recordFailure(keys);
+    return invalid;
+  }
 
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
-  if (!ok) return invalid;
+  if (!ok) {
+    await recordFailure(keys);
+    return invalid;
+  }
 
+  await clearFailures(keys);
   await createSession(user.id);
   redirect(user.role === "ADMIN" ? "/admin" : "/account");
 }
