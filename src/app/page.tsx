@@ -13,18 +13,29 @@ import { Reveal } from "@/components/motion/reveal";
 import { SplitText } from "@/components/motion/split-text";
 import { db } from "@/lib/db";
 
-// The catalogue changes rarely; regenerate hourly rather than per request.
-export const revalidate = 3600;
+/**
+ * Rendered per request.
+ *
+ * This used to regenerate hourly on the grounds that the catalogue rarely
+ * changes. Here it changes every time a piece is added or sells — and most
+ * pieces are one of a kind, so an hour of cached homepage meant new stock
+ * missing from the front of the shop and sold stock still on it.
+ */
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const [featured, collections] = await Promise.all([
+    // Everything in stock, not a hand-picked three. The homepage only showed
+    // pieces flagged "featured", capped at three, so a newly added tee did not
+    // appear on the front of the shop at all unless someone remembered to
+    // flag it — and even then it pushed another one off. Featured pieces still
+    // lead; the rest follow in the order set in the admin panel.
     db.product.findMany({
-      where: { status: "ACTIVE", featured: true },
-      orderBy: { position: "asc" },
+      where: { status: "ACTIVE" },
+      orderBy: [{ featured: "desc" }, { position: "asc" }, { createdAt: "desc" }],
       include: {
         ...productCardInclude,
       },
-      take: 3,
     }),
     db.collection.findMany({ orderBy: { position: "asc" } }),
   ]);
@@ -58,8 +69,11 @@ export default async function HomePage() {
         {featured.length > 0 ? (
           <div className="mt-16 grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((product, i) => (
-              <Reveal key={product.id} delay={i * 110}>
-                <ProductCard product={product} index={i} priority={i === 0} />
+              // Staggered within each row, not down the whole list. With three
+              // cards `i * 110` was a pleasant cascade; with thirty it made the
+              // last row wait over three seconds after scrolling into view.
+              <Reveal key={product.id} delay={(i % 3) * 110}>
+                <ProductCard product={product} index={i} priority={i < 3} />
               </Reveal>
             ))}
           </div>
